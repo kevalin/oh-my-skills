@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-Interpreter — clip any web article into a bilingual Obsidian note.
+Obsidian Web Clipper — clip any web article into a bilingual Obsidian note.
 
 Usage:
-  python clip.py <url> [--vault ~/Documents/obsidian/MyVault] [--native-lang zh]
+  python clip.py <url> [--vault ~/Documents/obsidian/MyVault] [--lang en|zh|auto]
 
 Converts a web article or X/Twitter post into a bilingual (EN/CN) Obsidian note
 with YAML frontmatter, local images, and duplicate detection.
@@ -31,9 +31,17 @@ TZ = timezone(timedelta(hours=8))
 # ── Helpers ─────────────────────────────────────────────────────
 
 def slugify(text, max_len=80):
-    """Turn a title into a filename-safe slug."""
-    text = re.sub(r'[<>:"/\\|?*]', '', text)
-    text = re.sub(r'\s+', ' ', text).strip()
+    """Turn a title into a filename-safe slug (English side only)."""
+    # Strip Chinese side: keep text before <br> or ' - ' (when right side has CJK)
+    cn = re.compile(r'[\u4e00-\u9fff]')
+    if '<br>' in text:
+        text = text.split('<br>')[0]
+    elif ' - ' in text:
+        left, right = text.split(' - ', 1)
+        if cn.search(right):
+            text = left
+    text = re.sub(r'[<>:"/\\|?*]', ' ', text)
+    text = re.sub(r'\s+', ' ', text).strip().rstrip('. ')
     if len(text) > max_len:
         text = text[:max_len].rsplit(' ', 1)[0]
     return text
@@ -296,11 +304,9 @@ def main():
     needs_translation = (source_lang != args.native_lang)
     print(f"   Source language: {source_lang} | Native: {args.native_lang} | Translate: {needs_translation}")
 
-    # Step 3: Set up paths
+    # Step 3: Set up paths (flat layout — note at vault root, images in vault/assets/)
     slug = slugify(title)
-    note_dir = vault_dir / slug
-    note_dir.mkdir(parents=True, exist_ok=True)
-    asset_dir = note_dir / ASSETS_DIR
+    asset_dir = vault_dir / ASSETS_DIR
 
     # Step 4: Download images
     image_mapping = {}
@@ -324,7 +330,7 @@ def main():
     )
 
     # Write raw note (agent will add translations)
-    note_path = note_dir / f"{slug}.md"
+    note_path = vault_dir / f"{slug}.md"
     note_path.write_text(raw_note, encoding='utf-8')
 
     # Step 6: Output summary (for agent to consume)

@@ -1,16 +1,14 @@
 ---
 name: interpreter
 description: "Clip any web article or X/Twitter post into an Obsidian note in your native language. Detects source language — translates only when needed. Produces bilingual EN/CN notes with YAML frontmatter, local images, duplicate detection, and validation gates."
-version: 2.1.0
+version: 3.0.0
 platforms: [linux, macos]
-metadata:
-  hermes:
-    related_skills: [proofreader, humanizer, interpreter-content-pipeline]
+license: MIT
 ---
 
 # Interpreter
 
-Turn URLs into polished Obsidian notes — in your language. The production workflow that powers a 390+ note knowledge base.
+Turn URLs into polished Obsidian notes — in your language. A production workflow that powers a 390+ note knowledge base. **Agent-agnostic**: works with any coding agent (Claude Code, Codex, OpenCode, Gemini CLI, Hermes, etc.) — no platform-specific tools required beyond a shell, Python 3.10+, and whatever fetch capability your agent has.
 
 ## Quick Start
 
@@ -18,9 +16,30 @@ Turn URLs into polished Obsidian notes — in your language. The production work
 clip https://example.com/article
 ```
 
-That's it. Hermes fetches, detects language, translates if needed, downloads images, and saves.
+That's it. Fetch, detect language, translate if needed, download images, save.
 
-First-time setup: tell Hermes your native language and Obsidian vault path once.
+First-time setup: tell the agent your native language and Obsidian vault path once (or pass them each time).
+
+## Repository Layout
+
+```
+interpreter/
+├── SKILL.md                  # this file — the agent runbook
+├── scripts/
+│   ├── clip.py               # fetch + dedup + language detection + image download + raw save
+│   ├── dedup.sh              # quick vault duplicate scan (requires ripgrep)
+│   ├── fxtwitter-parse.py    # dump fxtwitter X Article JSON → markdown source + media manifest
+│   ├── batch-x-article-final-gate.py       # gate: X Article structure/terminology/coverage
+│   ├── manual-web-article-final-gate.py    # gate: web article <br> format/YAML/UI residue
+│   ├── manual-bilingual-final-check.py     # gate: bilingual structure/images/terminology drift
+│   ├── verify-chinese-x-article.py         # gate: Chinese-original X Articles (monolingual)
+│   ├── save-x-article-from-fxtwitter.py    # helper: Chinese-original X Article direct save
+│   └── audit-bilingual-format.py           # audit/fix <br> format across a vault
+└── references/
+    └── setup-guide.md        # first-time setup for a new user
+```
+
+All scripts are pure Python/shell with no agent-specific dependencies. The gates are **deterministic** — the same input always produces the same verdict, so any agent can run them and get identical results.
 
 ## The Full Pipeline
 
@@ -30,6 +49,10 @@ When the user sends a URL or says `clip <url>`:
 
 Before any work, check if the source/canonical URL already exists in the vault. Search frontmatter `source:` values. If found → report filename, stop.
 
+```bash
+rg -l --fixed-strings "<url>" <vault>   # or: python scripts/clip.py --dedup-only <url>
+```
+
 ### 1. Fetch Content
 
 | Source | Method |
@@ -38,23 +61,29 @@ Before any work, check if the source/canonical URL already exists in the vault. 
 | **X with "Copy as Markdown"** | User-pasted Markdown — preferred, avoids fxtwitter risk |
 | **Slax Reader X shares** | `https://r.slax.com/b/<id>` — read-only mirror, extract canonical X URL from Source link, then fxtwitter |
 | **Web articles** | Jina Reader (`https://r.jina.ai/<url>`) → clean markdown |
-| **Web (Jina blocked)** | `web_extract` or browser |
+| **Web (Jina blocked)** | Your agent's web-extract tool, or a headless browser |
 | **Substack/paywalled** | RSS feed `content:encoded` (proxy unset: `env -u http_proxy -u https_proxy curl -4 -L --http1.1`), otherwise ask user |
 | **Medium (Cloudflare)** | Jina Reader fallback, localize `miro.medium.com` images |
+| **JS-rendered dev blogs (stripe.dev, etc.)** | Plain extraction returns only metadata — the article body renders client-side. Use a headless browser and read `document.querySelector('article')?.innerText` (or the page's "Copy for LLM" button) |
 | **Talk/slide-deck pages** | Parse `article.talk` / `.talk-segment` with paired images, exclude nav/social-card chrome |
 | **Event pages (Goldcast, etc.)** | Parse `window.uberdata`, archive durable content only (title, abstract, speakers, bullets), strip registration chrome |
-| **PDF papers/reports** | Test text layer first (`pdftotext`, `web_extract`); if image-only → `pdftoppm` + `tesseract` OCR. Prefer canonical arXiv URL as `source`. For long surveys, create research-note archive (metadata, abstract, claims, taxonomy, key tables, limitations) rather than verbatim dump |
-| **t.co / wrapper links** | Ask user for canonical URL — do not bypass redirect security |
+| **PDF papers/reports** | Test text layer first (`pdftotext`, your extract tool); if image-only → `pdftoppm` + `tesseract` OCR. Prefer canonical arXiv URL as `source`. For long surveys, create research-note archive (metadata, abstract, claims, taxonomy, key tables, limitations) rather than verbatim dump |
+| **t.co / wrapper links** | Try a web search for the canonical URL first; only ask the user if search fails — do not bypass redirect security |
 
-**Fxtwitter retry pattern:** `curl` may fail with TLS EOF under proxy. Retry chain:
-1. `curl -sL --max-time 30 -x http://127.0.0.1:7890 "https://api.fxtwitter.com/status/<ID>"` → `/tmp/x_<ID>.json`
+**Fxtwitter retry pattern:** `curl` may fail with TLS EOF under a proxy. Retry chain:
+1. `curl -sL --max-time 30 <proxy-flag> "https://api.fxtwitter.com/status/<ID>"` → `/tmp/x_<ID>.json`
 2. If TLS EOF: retry with Python `requests` + explicit `http`/`https` proxies + `verify=False`
-3. If still fails: `web_extract(["https://api.fxtwitter.com/status/<ID>"])` → read cached file, undo Markdown escapes in JSON, write to `/tmp/x_<ID>.json`
-4. If all fail: browser extraction as last resort
+3. If still fails: fetch the API URL through your agent's web-extract tool → read the cached file, undo Markdown escapes in JSON, write to `/tmp/x_<ID>.json`
+4. If all fail: headless browser as last resort
 
-Use `scripts/fxtwitter-parse-script.py` (`interpreter-content-pipeline/references/`) for any X Article: dump blocks, resolve images, extract metadata in one pass.
+Use `scripts/fxtwitter-parse.py` for any X Article: dump blocks, resolve images, extract metadata in one pass:
 
-For all X/Twitter image downloads, use proxy: `curl -x http://127.0.0.1:7890`. Direct downloads from `pbs.twimg.com` time out.
+```bash
+python scripts/fxtwitter-parse.py /tmp/x_<ID>.json --images
+# writes /tmp/x_<ID>_source.md (block-by-block source) and prints the media manifest
+```
+
+> **Proxy note:** If your environment needs a proxy for outbound requests (common in CN networks), export it or pass it via curl `-x`. The examples use `http://127.0.0.1:7890` as a placeholder — replace with your actual proxy. Image downloads from `pbs.twimg.com` typically require the proxy.
 
 ### 2. Detect Language
 
@@ -69,10 +98,10 @@ When source is already Chinese, use a different save path — no translation, no
 
 ```bash
 # 1. Fetch fxtwitter JSON as usual
-curl -sL --max-time 30 -x http://127.0.0.1:7890 "https://api.fxtwitter.com/status/<ID>" -o /tmp/x_<ID>.json
+curl -sL --max-time 30 <proxy-flag> "https://api.fxtwitter.com/status/<ID>" -o /tmp/x_<ID>.json
 
 # 2. Save directly with the Chinese-first helper
-python ~/.hermes/skills/content/interpreter-content-pipeline/scripts/save-x-article-from-fxtwitter.py \
+python scripts/save-x-article-from-fxtwitter.py \
   --json /tmp/x_<ID>.json --source-url "https://x.com/user/status/<ID>" --tags "topic,tag"
 
 # 3. Post-save cleanup (always inspect before confirming):
@@ -86,7 +115,7 @@ python ~/.hermes/skills/content/interpreter-content-pipeline/scripts/save-x-arti
 #    - For MARKDOWN atomics: extract value.data.markdown, insert as fenced block
 
 # 4. Verify with Chinese-specific gate (NOT bilingual gate)
-python ~/.hermes/skills/content/interpreter-content-pipeline/scripts/verify-chinese-x-article.py \
+python scripts/verify-chinese-x-article.py \
   --file path/to/note.md --json /tmp/x_<ID>.json
 ```
 
@@ -134,7 +163,6 @@ English paragraph text.<br>中文翻译。
 Match the **exact original form** from the English source — hyphenation, capitalization, pluralization. Never normalize.
 
 **Translation quality:**
-- Before translating, load the `humanizer` skill (`creative/humanizer`) — strip AI-isms at a global level, not just individual words.
 - Contextual, not word-for-word. Read like natural Chinese.
 - Strip AI-isms: no "值得注意的是", "总而言之", "让我们", "众所周知", "在这个快速发展的时代".
 - No Chinese em-dashes (`——`) unless the English source has `—`, `–`, or ` - ` as a pause
@@ -168,6 +196,7 @@ tags:
   - topic-tag
 related:
   - "[[Related Note]]"
+  # use related: [] for articles with no connections
 type: clipper
 ---
 ```
@@ -182,32 +211,35 @@ Rules:
 
 ### 6. Images
 
-Download ALL images to `~/Documents/obsidian/Interpreter/assets/` with deterministic names:
+Download ALL images to `<vault>/assets/` with deterministic names:
 - `x-<post_id>-cover.<ext>` for cover
 - `x-<post_id>-<index>.<ext>` for inline (zero-padded)
 
 Rewrite all markdown image refs to local `assets/...` paths. No `pbs.twimg.com` or remote URLs should remain.
 
-For X images: **must use proxy** (`curl -x http://127.0.0.1:7890`). Direct downloads from `pbs.twimg.com` time out.
+For X images: **must use proxy** (e.g. `curl -x http://127.0.0.1:7890`). Direct downloads from `pbs.twimg.com` time out without one.
 
 If all download methods fail (corporate CDN block): keep remote URLs, note failure with ⚠️.
 
 ### 7. Relationship Layer
 
-For concept-rich articles, add after body:
+**Always required** — add these sections after the body in every saved note:
+
 ```markdown
+---
+
 ## Internal Links<br>内部链接
-- [[Concept Note]]<br>[[概念笔记]]
 
 ## Link Candidates<br>链接候选
+
 - [Author on X](https://x.com/author)<br>[作者的 X 主页](https://x.com/author)
 ```
 
-These sections follow `<br>` format. Link Candidates bullets also need `<br>` partners. Add Chinese-side Wikilinks to body where appropriate — do NOT add Wikilinks or Markdown styling to the English source side (breaks source coverage).
+For concept-rich articles, populate with actual links. For simple articles, leave headings with Link Candidates containing at least the source URL. The `manual-web-article-final-gate.py` checks for these sections — missing = FAIL.
 
 ### 8. Proofread
 
-Load the `proofreader` skill (`editorial/proofreader`) and execute its methodology against these project-specific standards:
+Run this structural + content checklist against the note before gates:
 
 **Part A — Structural (格式合规)**
 
@@ -238,27 +270,23 @@ Load the `proofreader` skill (`editorial/proofreader`) and execute its methodolo
 
 ### 9. Validate
 
-After proofreading passes, run the three gates:
+After proofreading passes, run the gates (all paths relative to this skill's `scripts/`):
 
 ```bash
 # Gate 1: X Article structure, terminology, source coverage
-python ~/.hermes/skills/content/interpreter-content-pipeline/scripts/batch-x-article-final-gate.py \
+python scripts/batch-x-article-final-gate.py \
   --pair /tmp/x_<id>.json=path/to/note.md
 
 # Gate 2: <br> format, YAML, orphans, UI residue (web articles)
-python ~/.hermes/skills/content/interpreter-content-pipeline/scripts/manual-web-article-final-gate.py \
+python scripts/manual-web-article-final-gate.py \
   --file path/to/note.md --source-text /tmp/source.md
 
 # Gate 3: Bilingual structure, code fences, images, terminology drift
-python ~/.hermes/skills/content/interpreter-content-pipeline/scripts/manual-bilingual-final-check.py \
+python scripts/manual-bilingual-final-check.py \
   --file path/to/note.md --expect-images <n>
 
-# Gate 4: Final <br> format compliance (X Articles with JSON source)
-python ~/.hermes/skills/content/interpreter-content-pipeline/scripts/manual-br-final-gate.py \
-  --json /tmp/x_<id>.json --file path/to/note.md
-
 # Chinese-original X Articles: use Chinese-specific gate instead
-python ~/.hermes/skills/content/interpreter-content-pipeline/scripts/verify-chinese-x-article.py \
+python scripts/verify-chinese-x-article.py \
   --file path/to/note.md --json /tmp/x_<id>.json
 ```
 
@@ -272,23 +300,20 @@ If ONLY these remain → PASS.
 
 ### 10. Save and Confirm
 
-Save to `~/Documents/obsidian/Interpreter/<Title>/<Title>.md`.
+Save as a **flat file** (no per-note subdirectory) at `<vault>/<Title>.md`.
+
+**Filename rule — `title.md`:** the filename is the English side of the frontmatter `title` (`<br>`-separated or ` - `-separated), slugged:
+
+- Strip the Chinese side entirely: `How LLMs Actually Work - LLM 工作原理详解` → `How LLMs Actually Work.md`
+- Replace `: \ / * ? " < > |` with spaces, collapse whitespace, trim trailing `.`/space
+- Pure-Chinese titles (Chinese-source articles) keep the Chinese title as-is
+- Cap at 120 chars, cut at a word boundary
+
+After renaming: batch-update `[[wikilink]]` references vault-wide, and never reuse a name that already exists (merge duplicates first).
 
 **Response discipline**: Reply with `Filename.md ✅` only. Do NOT paste validation logs, image counts, gate output, or process summaries unless the user asks or there was a blocker.
 
 ## Operational Patterns
-
-### Interrupted-Turn Recovery
-
-If a session is cut off mid-translation, inspect `/tmp` for artifacts (`x_<ID>.json`, `*_source.md`, `*_translated_part_*.md`). Check if a partial `.md` already exists in vault before re-delegating.
-
-**Resume decision tree:**
-- `/tmp/x_<ID>.json` exists but no vault file → build from JSON (parent or subagent)
-- `*_source.md` exists → read it, don't re-fetch
-- `*_translated_part_*.md` fragments exist → parent assembles and gates
-- Nothing in `/tmp` → start fresh
-
-When a new URL arrives while a previous one is still in progress: process both as one batch. Do the duplicate check first, then translate both independently, and report all filenames together.
 
 ### Parallel / Batch URL Handling
 
@@ -296,8 +321,8 @@ When user sends multiple URLs or a new URL mid-processing:
 
 1. **Dedup all URLs first** — separate read-only checks from side-effectful writes
 2. **Fetch/parse in parallel** — independent fxtwitter/Jina calls
-3. **Translate each independently** — use `delegate_task` for >70-block articles, parent for shorter ones
-4. **Parent verification for ALL** — subagents complete translation but parent must re-inspect frontmatter, run gates, and strip CTA before confirming
+3. **Translate each independently** — delegate to subagents if your runtime supports them (for >70-block articles), or translate sequentially
+4. **Parent verification for ALL** — subagents complete translation but the parent must re-inspect frontmatter, run gates, and strip CTA before confirming
 5. **Report together** — list all filenames with ✅, one per line
 
 **Parent verification after subagents** (mandatory):
@@ -310,16 +335,28 @@ When user sends multiple URLs or a new URL mid-processing:
 
 For X Articles with 100+ blocks or web articles over 20k chars:
 
-1. **Phase 1 — Parse & dump**: Save full source dump to `/tmp/<slug>_source.md` with `<!-- BLOCK N -->` markers
+1. **Phase 1 — Parse & dump**: Save full source dump to `/tmp/<slug>_source.md` with `<!-- BLOCK N -->` markers (use `scripts/fxtwitter-parse.py`)
 2. **Phase 2 — Fragment translation**: Split into contiguous ranges (e.g., 0–160, 160–320, 320–end). Delegate each fragment to write ONLY `/tmp/<slug>_translated_part_<start>_<end>.md`. Include block markers for reassembly.
 3. **Phase 3 — Parent assembly**: Assemble fragments in order, add frontmatter, localize images, add relationship layer, strip CTA
 4. **Phase 4 — Parent gates**: Run all applicable gates. Never confirm from a subagent.
 
 For atomic blocks in fragments:
 - MARKDOWN → original fenced block, no Chinese partner
-- MEDIA → placeholder for parent localization  
+- MEDIA → placeholder for parent localization
 - DIVIDER → `---` only if substantive
 - TWEET → bilingual embedded-tweet URL line
+
+### Interrupted-Turn Recovery
+
+If a session is cut off mid-translation, inspect `/tmp` for artifacts (`x_<ID>.json`, `*_source.md`, `*_translated_part_*.md`). Check if a partial `.md` already exists in vault before re-delegating.
+
+**Resume decision tree:**
+- `/tmp/x_<ID>.json` exists but no vault file → build from JSON
+- `*_source.md` exists → read it, don't re-fetch
+- `*_translated_part_*.md` fragments exist → parent assembles and gates
+- Nothing in `/tmp` → start fresh
+
+When a new URL arrives while a previous one is still in progress: process both as one batch. Do the duplicate check first, then translate both independently, and report all filenames together.
 
 ## Configuration
 
@@ -328,11 +365,15 @@ For atomic blocks in fragments:
 | Vault | `~/Documents/obsidian/Interpreter` | `--vault /path` |
 | Native language | `zh` | `--native-lang en` |
 | Force re-clip | false | `--force` |
+| Proxy | unset | `HTTP_PROXY`/`HTTPS_PROXY` env, or curl `-x` |
 
 ## Pitfalls
 
 - **Agent term replacement**: Never use 智能体 or 代理 for AI agent. Match exact source form (sub-agents ≠ subagent ≠ subagents).
-- **English side purity**: No Wikilinks, no Markdown styling, no paraphrasing. Source coverage compares byte-for-byte.
+- **English side purity**: No Wikilinks, no Markdown styling (`**`, `*`, `[]`, etc.), no paraphrasing. Source coverage compares byte-for-byte. Strip all `**` from English side of `<br>` lines before gates — bold/emphasis only on Chinese side.
+- **Images are single-language**: Never add a Chinese partner image line (`![]()` has no `<br>`). The gate counts markdown image lines — a bilingual duplicate causes `image count mismatch: 2 != 1`. One image, one line.
+- **`related` required even if empty**: `manual-web-article-final-gate.py` requires `related` in frontmatter. Set `related: []` for articles with no known connections.
+- **Internal Links / Link Candidates always required**: Both sections must exist in every saved note (even if empty with just the headings). Gate 2 checks for their presence.
 - **Numbered headings**: Chinese side drops the number. `## 1. Title<br>标题`, not `## 1. Title<br>1. 标题`.
 - **Bullet/numbered lists**: No repeated markers after `<br>`. `- EN<br>CN`, not `- EN<br>- CN`.
 - **Code blocks**: Preserved as-is, single-language, no `<br>` partner. Do not add translated code fence.
@@ -346,16 +387,13 @@ For atomic blocks in fragments:
 - **Inline style formula corruption**: fxtwitter `inlineStyleRanges` can mark substrings inside formulas as italic/bold, turning `=A2*B2, =A3*B3` into broken `=A2*B2*, =*A3*B3`. After applying styles, compare source blocks against saved file for exact text preservation; remove stray emphasis markers inside formulas/code before confirming.
 - **Bold markers causing mass coverage failures**: applying `**` from `inlineStyleRanges` to the English side breaks source coverage because the raw block text doesn't have them. Fix: strip all `**` from English side of `<br>` lines before gates. Apply bold/emphasis only on Chinese side.
 - **Cross-language contamination**: After drafting translations manually or via fragments, scan for non-English/non-Chinese stray scripts (e.g., Cyrillic `посвящ`) indicating accidental language drift. Source coverage gates won't catch these.
-- **Retroactive fixes**: When translation rules change (e.g., new forbidden-translation term), check whether existing files need retroactive patching. Use `scripts/audit-fix-bilingual-format.py` for `<br>` format audits, and Python sed for terminology sweeps.
+- **Retroactive fixes**: When translation rules change (e.g., new forbidden-translation term), check whether existing files need retroactive patching. Use `scripts/audit-bilingual-format.py` for `<br>` format audits, and Python sed for terminology sweeps.
 
-## Scripts
+## Optional Enhancements
 
-- `scripts/clip.py` — fetch + dedup + language detection + image download + raw save
-- `scripts/dedup.sh` — quick vault duplicate scan
-- Gate scripts (in `interpreter-content-pipeline`): `batch-x-article-final-gate.py`, `manual-web-article-final-gate.py`, `manual-bilingual-final-check.py`, `manual-br-final-gate.py`, `verify-chinese-x-article.py`
-- `interpreter-content-pipeline/references/fxtwitter-parse-script.py` — full fxtwitter block dump + image resolution
-- `interpreter-content-pipeline/scripts/save-x-article-from-fxtwitter.py` — Chinese-original X Article save helper
-- `interpreter-content-pipeline/scripts/audit-fix-bilingual-format.py` — audit/fix `<br>` format across vault
+- **Humanizer** ([github.com/blader/humanizer](https://github.com/blader/humanizer)): strip AI-isms from the Chinese side at a global level. Load before translating if available.
+- **renhua rules** ([Pluviobyte/rnskill](https://github.com/Pluviobyte/rnskill)): condensed anti-AI-writing rules used for Xiaohongshu drafts; not required for archive notes.
+- **Proofreader pass**: the full checklist is inlined in section 8 above, so no external skill is required.
 
 ## Credits
 
