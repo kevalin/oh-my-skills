@@ -8,7 +8,7 @@ Built by [K L](https://github.com/kevalin). Works with any coding agent (Claude 
 
 | Skill | Description | Status |
 |-------|-------------|--------|
-| [interpreter](skills/interpreter/) | Turn any URL into a polished bilingual (EN/CN) or native-language Obsidian note. Language detection, translation, local images, duplicate detection, validation gates. | 🟢 Production (390+ notes archived) |
+| [clip-note](skills/clip-note/) | Turn any URL into a polished bilingual (EN/CN) or native-language Obsidian note. Language detection, translation, local images, duplicate detection, validation gates. | 🟢 Production (390+ notes archived) |
 
 ## Quick Start
 
@@ -19,11 +19,11 @@ Copy the skill directory into your agent's skills folder, or reference it in-pla
 ```bash
 # Claude Code / Codex / OpenCode style
 mkdir -p ~/.claude/skills/
-cp -r skills/interpreter ~/.claude/skills/
+cp -r skills/clip-note ~/.claude/skills/
 
 # Hermes Agent
 mkdir -p ~/.hermes/skills/content/
-cp -r skills/interpreter ~/.hermes/skills/content/
+cp -r skills/clip-note ~/.hermes/skills/content/
 ```
 
 ### 2. Configure
@@ -45,12 +45,12 @@ That's it. The agent fetches, detects language, translates only when needed, dow
 
 ## How It Works
 
-The `interpreter` skill is a two-layer system:
+The `clip-note` skill is a two-layer system:
 
 1. **`scripts/`** — deterministic core (pure Python/shell): fetch (Jina Reader → raw HTML fallback), duplicate detection, language detection (CJK ratio), image download, fxtwitter X Article parsing, and 4 validation gates. Same input always produces the same verdict.
 2. **Agent pipeline** — the intelligent layer: `<br>` bilingual formatting, protected terminology (agent/MCP/tool/prompt stay English), AI-ism stripping, CTA removal, YAML frontmatter per Obsidian Clipper spec, relationship layer, proofreading checklist, and validation gates.
 
-The full 11-step pipeline is documented in [SKILL.md](skills/interpreter/SKILL.md).
+The full 11-step pipeline is documented in [SKILL.md](skills/clip-note/SKILL.md).
 
 ## Philosophy
 

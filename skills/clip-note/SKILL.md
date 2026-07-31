@@ -1,5 +1,5 @@
 ---
-name: interpreter
+name: clip-note
 description: "Clip any web article or X/Twitter post into an Obsidian note in your native language. Detects source language — translates only when needed. Produces bilingual EN/CN notes with YAML frontmatter, local images, duplicate detection, and validation gates."
 version: 3.0.0
 platforms: [linux, macos]
@@ -23,7 +23,7 @@ First-time setup: tell the agent your native language and Obsidian vault path on
 ## Repository Layout
 
 ```
-interpreter/
+clip-note/
 ├── SKILL.md                  # this file — the agent runbook
 ├── scripts/
 │   ├── clip.py               # fetch + dedup + language detection + image download + raw save

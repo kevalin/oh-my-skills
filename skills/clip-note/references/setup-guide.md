@@ -26,13 +26,13 @@ No agent-specific runtime is required — this skill works with any coding agent
 
 ## Step 2: Install the skill
 
-Copy the whole `interpreter/` directory into your agent's skills folder, or
+Copy the whole `clip-note/` directory into your agent's skills folder, or
 reference it in-place:
 
 ```bash
 # Example: Claude Code / Codex skills directory
 mkdir -p ~/.claude/skills/
-cp -r interpreter ~/.claude/skills/
+cp -r clip-note ~/.claude/skills/
 
 # Or keep it anywhere and point your agent at the SKILL.md path
 ```
@@ -40,7 +40,7 @@ cp -r interpreter ~/.claude/skills/
 Verify:
 
 ```bash
-ls interpreter/
+ls clip-note/
 # SKILL.md  scripts/  references/
 ```
 
@@ -99,7 +99,7 @@ They are deterministic — any agent gets the same PASS/FAIL verdict.
 ## Uninstall
 
 ```bash
-rm -rf ~/.claude/skills/interpreter
+rm -rf ~/.claude/skills/clip-note
 ```
 
 Your notes stay in your vault.
