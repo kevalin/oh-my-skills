@@ -29,12 +29,8 @@ clip-note/
 │   ├── clip.py               # fetch + dedup + language detection + image download + raw save
 │   ├── dedup.sh              # quick vault duplicate scan (requires ripgrep)
 │   ├── fxtwitter-parse.py    # dump fxtwitter X Article JSON → markdown source + media manifest
-│   ├── batch-x-article-final-gate.py       # gate: X Article structure/terminology/coverage
-│   ├── manual-web-article-final-gate.py    # gate: web article <br> format/YAML/UI residue
-│   ├── manual-bilingual-final-check.py     # gate: bilingual structure/images/terminology drift
-│   ├── verify-chinese-x-article.py         # gate: Chinese-original X Articles (monolingual)
-│   ├── save-x-article-from-fxtwitter.py    # helper: Chinese-original X Article direct save
-│   └── audit-bilingual-format.py           # audit/fix <br> format across a vault
+│   ├── gate.py               # unified gate: X-bilingual / native / web / structural / audit modes
+│   └── save-x-article.py     # helper: Chinese-original X Article direct save
 └── references/
     └── setup-guide.md        # first-time setup for a new user
 ```
@@ -101,7 +97,7 @@ When source is already Chinese, use a different save path — no translation, no
 curl -sL --max-time 30 <proxy-flag> "https://api.fxtwitter.com/status/<ID>" -o /tmp/x_<ID>.json
 
 # 2. Save directly with the Chinese-first helper
-python scripts/save-x-article-from-fxtwitter.py \
+python scripts/save-x-article.py \
   --json /tmp/x_<ID>.json --source-url "https://x.com/user/status/<ID>" --tags "topic,tag"
 
 # 3. Post-save cleanup (always inspect before confirming):
@@ -114,9 +110,10 @@ python scripts/save-x-article-from-fxtwitter.py \
 #    - Remove <!-- [image not available] --> placeholders
 #    - For MARKDOWN atomics: extract value.data.markdown, insert as fenced block
 
-# 4. Verify with Chinese-specific gate (NOT bilingual gate)
-python scripts/verify-chinese-x-article.py \
-  --file path/to/note.md --json /tmp/x_<ID>.json
+# 4. Verify (auto-detects Chinese-original native mode)
+python scripts/gate.py \
+  --file path/to/note.md --json /tmp/x_<ID>.json \
+  --source-url "https://x.com/user/status/<ID>"
 ```
 
 Chinese-original notes are monolingual — no `<br>` anywhere. The bilingual gate will produce expected false positives on these.
@@ -235,7 +232,7 @@ If all download methods fail (corporate CDN block): keep remote URLs, note failu
 - [Author on X](https://x.com/author)<br>[作者的 X 主页](https://x.com/author)
 ```
 
-For concept-rich articles, populate with actual links. For simple articles, leave headings with Link Candidates containing at least the source URL. The `manual-web-article-final-gate.py` checks for these sections — missing = FAIL.
+For concept-rich articles, populate with actual links. For simple articles, leave headings with Link Candidates containing at least the source URL. The unified `gate.py` checks for these sections — missing = FAIL.
 
 ### 8. Proofread
 
@@ -270,24 +267,24 @@ Run this structural + content checklist against the note before gates:
 
 ### 9. Validate
 
-After proofreading passes, run the gates (all paths relative to this skill's `scripts/`):
+After proofreading passes, run the unified gate (mode auto-detected; all paths relative to this skill's `scripts/`):
 
 ```bash
-# Gate 1: X Article structure, terminology, source coverage
-python scripts/batch-x-article-final-gate.py \
-  --pair /tmp/x_<id>.json=path/to/note.md
+# Bilingual X Article (source coverage vs fxtwitter JSON)
+python scripts/gate.py --file path/to/note.md --json /tmp/x_<id>.json --expect-images <n>
 
-# Gate 2: <br> format, YAML, orphans, UI residue (web articles)
-python scripts/manual-web-article-final-gate.py \
-  --file path/to/note.md --source-text /tmp/source.md
+# Bilingual web article (source coverage vs cleaned text dump)
+python scripts/gate.py --file path/to/note.md --source-text /tmp/source.md --expect-images <n>
 
-# Gate 3: Bilingual structure, code fences, images, terminology drift
-python scripts/manual-bilingual-final-check.py \
-  --file path/to/note.md --expect-images <n>
+# Chinese-original X Article (no <br> body, local-only images)
+python scripts/gate.py --file path/to/note.md --json /tmp/x_<id>.json \
+  --source-url https://x.com/<user>/status/<id> --expect-images <n>
 
-# Chinese-original X Articles: use Chinese-specific gate instead
-python scripts/verify-chinese-x-article.py \
-  --file path/to/note.md --json /tmp/x_<id>.json
+# Structural-only quick check (any note)
+python scripts/gate.py --file path/to/note.md
+
+# Vault-wide <br> format audit (optional fix)
+python scripts/gate.py --audit <vault_dir> [--fix] [--only-br]
 ```
 
 **Known false positives (accept, don't fix):**
@@ -372,7 +369,7 @@ When a new URL arrives while a previous one is still in progress: process both a
 - **Agent term replacement**: Never use 智能体 or 代理 for AI agent. Match exact source form (sub-agents ≠ subagent ≠ subagents).
 - **English side purity**: No Wikilinks, no Markdown styling (`**`, `*`, `[]`, etc.), no paraphrasing. Source coverage compares byte-for-byte. Strip all `**` from English side of `<br>` lines before gates — bold/emphasis only on Chinese side.
 - **Images are single-language**: Never add a Chinese partner image line (`![]()` has no `<br>`). The gate counts markdown image lines — a bilingual duplicate causes `image count mismatch: 2 != 1`. One image, one line.
-- **`related` required even if empty**: `manual-web-article-final-gate.py` requires `related` in frontmatter. Set `related: []` for articles with no known connections.
+- **`related` required even if empty**: `gate.py` requires `related` in frontmatter. Set `related: []` for articles with no known connections.
 - **Internal Links / Link Candidates always required**: Both sections must exist in every saved note (even if empty with just the headings). Gate 2 checks for their presence.
 - **Numbered headings**: Chinese side drops the number. `## 1. Title<br>标题`, not `## 1. Title<br>1. 标题`.
 - **Bullet/numbered lists**: No repeated markers after `<br>`. `- EN<br>CN`, not `- EN<br>- CN`.
@@ -387,7 +384,7 @@ When a new URL arrives while a previous one is still in progress: process both a
 - **Inline style formula corruption**: fxtwitter `inlineStyleRanges` can mark substrings inside formulas as italic/bold, turning `=A2*B2, =A3*B3` into broken `=A2*B2*, =*A3*B3`. After applying styles, compare source blocks against saved file for exact text preservation; remove stray emphasis markers inside formulas/code before confirming.
 - **Bold markers causing mass coverage failures**: applying `**` from `inlineStyleRanges` to the English side breaks source coverage because the raw block text doesn't have them. Fix: strip all `**` from English side of `<br>` lines before gates. Apply bold/emphasis only on Chinese side.
 - **Cross-language contamination**: After drafting translations manually or via fragments, scan for non-English/non-Chinese stray scripts (e.g., Cyrillic `посвящ`) indicating accidental language drift. Source coverage gates won't catch these.
-- **Retroactive fixes**: When translation rules change (e.g., new forbidden-translation term), check whether existing files need retroactive patching. Use `scripts/audit-bilingual-format.py` for `<br>` format audits, and Python sed for terminology sweeps.
+- **Retroactive fixes**: When translation rules change (e.g., new forbidden-translation term), check whether existing files need retroactive patching. Use `scripts/gate.py --audit <vault>` for `<br>` format audits, and Python sed for terminology sweeps.
 
 ## Optional Enhancements
 

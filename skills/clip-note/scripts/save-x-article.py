@@ -2,7 +2,7 @@
 """Save a Chinese-original X Article fxtwitter JSON as an Obsidian Interpreter note.
 
 Usage:
-  python save-x-article-from-fxtwitter.py --json /tmp/x_<id>.json --source-url 'https://x.com/.../status/<id>'
+  python save-x-article.py --json /tmp/x_<id>.json --source-url 'https://x.com/.../status/<id>'
 
 This is for Chinese-original X Articles. English articles still need bilingual EN/CN translation.
 """
