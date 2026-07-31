@@ -392,7 +392,6 @@ When a new URL arrives while a previous one is still in progress: process both a
 ## Optional Enhancements
 
 - **Humanizer** ([github.com/blader/humanizer](https://github.com/blader/humanizer)): strip AI-isms from the Chinese side at a global level. Load before translating if available.
-- **renhua rules** ([Pluviobyte/rnskill](https://github.com/Pluviobyte/rnskill)): condensed anti-AI-writing rules used for Xiaohongshu drafts; not required for archive notes.
 - **Proofreader pass**: the full checklist is inlined in section 8 above, so no external skill is required.
 
 ## Credits
