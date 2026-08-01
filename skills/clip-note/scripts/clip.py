@@ -3,10 +3,11 @@
 Obsidian Web Clipper — clip any web article into a bilingual Obsidian note.
 
 Usage:
-  python clip.py <url> [--vault ~/Documents/obsidian/MyVault] [--lang en|zh|auto]
+  python clip.py <url> [--vault ~/Documents/obsidian/MyVault]
 
 Converts a web article or X/Twitter post into a bilingual (EN/CN) Obsidian note
 with YAML frontmatter, local images, and duplicate detection.
+Fixed EN→ZH: English articles translate to Chinese; Chinese articles save as-is.
 """
 
 import argparse
@@ -23,7 +24,7 @@ from datetime import datetime, timezone, timedelta
 
 # ── Config ──────────────────────────────────────────────────────
 DEFAULT_VAULT = os.path.expanduser("~/Documents/obsidian/Interpreter")
-DEFAULT_NATIVE_LANG = "zh"  # user's native language
+TARGET_LANG = "zh"  # fixed: English → Chinese; Chinese saved as-is
 ASSETS_DIR = "assets"
 
 TZ = timezone(timedelta(hours=8))
@@ -270,7 +271,6 @@ def main():
     parser = argparse.ArgumentParser(description="Clip a web article into Obsidian")
     parser.add_argument("url", help="URL to clip")
     parser.add_argument("--vault", default=DEFAULT_VAULT, help="Obsidian vault path")
-    parser.add_argument("--native-lang", default=DEFAULT_NATIVE_LANG, help="Your native language (zh, en, ja, etc.)")
     parser.add_argument("--author", default="", help="Author name override")
     parser.add_argument("--force", action="store_true", help="Skip duplicate check")
 
@@ -301,8 +301,8 @@ def main():
 
     # Step 2.5: Detect source language
     source_lang = detect_language(content['text'])
-    needs_translation = (source_lang != args.native_lang)
-    print(f"   Source language: {source_lang} | Native: {args.native_lang} | Translate: {needs_translation}")
+    needs_translation = (source_lang != TARGET_LANG)
+    print(f"   Source language: {source_lang} | Translate: {needs_translation}")
 
     # Step 3: Set up paths (flat layout — note at vault root, images in vault/assets/)
     slug = slugify(title)
@@ -349,7 +349,7 @@ def main():
         "title": title,
         "source_url": content['canonical_url'],
         "source_language": source_lang,
-        "native_language": args.native_lang,
+        "target_language": TARGET_LANG,
         "needs_translation": needs_translation,
         "image_count": len(image_mapping),
         "char_count": len(raw_note),
