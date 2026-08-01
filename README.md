@@ -8,7 +8,7 @@ Built by [K L](https://github.com/kevalin). Works with any coding agent (Claude 
 
 | Skill | Description | Status |
 |-------|-------------|--------|
-| [clip-note](skills/clip-note/) | Turn any URL into a polished bilingual (EN/CN) or native-language Obsidian note. Language detection, translation, local images, duplicate detection, validation gates. | 🟢 Production (390+ notes archived) |
+| [clip-note](skills/clip-note/) | Turn any URL into a polished bilingual (EN/CN) Obsidian note. Fixed EN→ZH: English articles translate to Chinese, Chinese articles save as-is. Local images, duplicate detection, validation gates. | 🟢 Production (390+ notes archived) |
 
 ## Quick Start
 
@@ -28,10 +28,9 @@ cp -r skills/clip-note ~/.hermes/skills/content/
 
 ### 2. Configure
 
-Tell your agent your native language and vault path once:
+Tell your agent your Obsidian vault path once:
 
 ```
-My native language is zh.
 My Obsidian vault is at ~/Documents/obsidian/Notes.
 ```
 
@@ -41,7 +40,7 @@ My Obsidian vault is at ~/Documents/obsidian/Notes.
 clip https://example.com/article
 ```
 
-That's it. The agent fetches, detects language, translates only when needed, downloads images, and saves a polished markdown note.
+That's it. The agent fetches, translates English articles to Chinese, downloads images, and saves a polished markdown note.
 
 ## How It Works
 
@@ -56,7 +55,7 @@ The full 11-step pipeline is documented in [SKILL.md](skills/clip-note/SKILL.md)
 
 - **One URL in, one polished note out.** No configuration ceremony.
 - **English side stays pure.** Source text is preserved byte-for-byte for verification; all enrichment lives on the Chinese side.
-- **Native language first.** If the source is already in your language, it saves directly — no wasteful translation pass.
+- **Fixed EN→ZH.** English articles translate to Chinese; Chinese articles save as-is — no wasteful translation pass.
 - **Gates over vibes.** Every note passes structural + terminology validation before confirmation.
 - **Deterministic validation.** The gate scripts are agent-agnostic: any agent running them gets identical PASS/FAIL verdicts.
 
