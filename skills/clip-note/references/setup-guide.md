@@ -61,7 +61,9 @@ clip <url> --vault ~/Documents/obsidian/Notes
 clip https://paulgraham.com/greatwork.html
 ```
 
-Output:
+The agent checks for duplicates first — if the URL is already in your vault, it
+reports the existing filename and stops (no fetch, no translation). Only new
+URLs proceed to fetching:
 
 ```bash
 📥 Fetching https://paulgraham.com/greatwork.html ...
@@ -72,9 +74,15 @@ Output:
 ✅ Note saved: ~/.../How to Do Great Work.md
 ```
 
+You can also run the dedup check standalone (no fetch/save):
+
+```bash
+python scripts/clip.py <url> --dedup-only
+```
+
 If the source is already Chinese:
 
-```
+```bash
    Source language: zh | Translate: False
 ```
 
