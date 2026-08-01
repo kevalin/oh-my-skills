@@ -63,8 +63,8 @@ For all X/Twitter image downloads, use proxy: `curl -x http://127.0.0.1:7890`. D
 
 Sample first 2000 chars. CJK >30% → Chinese (`zh`), else English (`en`).
 
-- **source == native** → save directly, no translation needed
-- **source ≠ native** → proceed with bilingual translation
+- **source == zh** → save directly, no translation needed
+- **source == en** → proceed with bilingual translation
 
 **Chinese-original X Articles (source=zh):**
 
