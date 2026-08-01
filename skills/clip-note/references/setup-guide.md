@@ -1,4 +1,4 @@
-# Setup Guide — Interpreter
+# Setup Guide — clip-note
 
 Detailed step-by-step for first-time setup.
 
@@ -6,14 +6,11 @@ Detailed step-by-step for first-time setup.
 
 | Component | Minimum | Check |
 |-----------|---------|-------|
+| Hermes Agent | Latest | `hermes --version` |
 | Python | 3.10+ | `python3 --version` |
 | requests | Latest | `pip install requests` |
 | ripgrep | (optional) | `rg --version` |
 | Obsidian | Any version | Just a vault directory |
-
-No agent-specific runtime is required — this skill works with any coding agent
-(Claude Code, Codex, OpenCode, Gemini CLI, Hermes, etc.). The agent reads
-`SKILL.md` as its runbook; the scripts are plain Python/shell.
 
 ## Step 1: Locate your Obsidian vault
 
@@ -26,21 +23,15 @@ No agent-specific runtime is required — this skill works with any coding agent
 
 ## Step 2: Install the skill
 
-Copy the whole `clip-note/` directory into your agent's skills folder, or
-reference it in-place:
-
 ```bash
-# Example: Claude Code / Codex skills directory
-mkdir -p ~/.claude/skills/
-cp -r clip-note ~/.claude/skills/
-
-# Or keep it anywhere and point your agent at the SKILL.md path
+mkdir -p ~/.hermes/skills/content/
+cp -r clip-note ~/.hermes/skills/content/
 ```
 
 Verify:
 
 ```bash
-ls clip-note/
+ls ~/.hermes/skills/content/clip-note/
 # SKILL.md  scripts/  references/
 ```
 
@@ -52,54 +43,58 @@ pip install requests
 
 ## Step 4: Configure
 
-Tell your agent your settings (or set them in your agent's config):
+Tell Hermes your Obsidian vault path:
 
 ```
-My native language is zh.
 My Obsidian vault is at ~/Documents/obsidian/Notes.
 ```
 
-If you're behind a proxy (common in CN networks), export it:
+Or pass it each time:
+
+```
+clip <url> --vault ~/Documents/obsidian/Notes
+```
+
+## Step 5: Test
+
+```bash
+clip https://paulgraham.com/greatwork.html
+```
+
+Output:
+
+```bash
+📥 Fetching https://paulgraham.com/greatwork.html ...
+   Title: How to Do Great Work
+   Images: 0
+   Source language: en | Translate: True
+
+✅ Note saved: ~/.../How to Do Great Work.md
+```
+
+If the source is already Chinese:
+
+```
+   Source language: zh | Translate: False
+```
+
+→ Agent saves directly, no translation pass.
+
+## Language handling
+
+Fixed EN→ZH: English articles are translated to Chinese; Chinese articles are saved as-is (no translation, no language-parameter flags).
+
+## Proxy
 
 ```bash
 export HTTP_PROXY=http://127.0.0.1:7890
 export HTTPS_PROXY=http://127.0.0.1:7890
 ```
 
-## Step 5: Test
-
-Ask your agent to clip a page:
-
-```
-clip https://paulgraham.com/greatwork.html
-```
-
-Expected output: `How to Do Great Work.md ✅`
-
-If the source is already in your native language, the agent saves directly with
-no translation pass.
-
-## Language detection
-
-The scripts distinguish Chinese vs English by CJK character ratio (>30% =
-Chinese). For other languages (Japanese, Korean, etc.), set `--native-lang`
-explicitly to avoid misclassification.
-
-## Filename rule
-
-Files are saved flat at `<vault>/<Title>.md`. The filename is the **English
-side** of the title (Chinese side stripped), slugged for filesystem safety.
-See `SKILL.md` section 10 for the exact rule.
-
-## Validation
-
-After saving, run the gate scripts in `scripts/` (see SKILL.md section 9).
-They are deterministic — any agent gets the same PASS/FAIL verdict.
-
 ## Uninstall
 
 ```bash
-rm -rf ~/.claude/skills/clip-note
+rm -rf ~/.hermes/skills/content/clip-note
 ```
 
 Your notes stay in your vault.
