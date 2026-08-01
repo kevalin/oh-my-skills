@@ -3,11 +3,12 @@
 Obsidian Web Clipper — clip any web article into a bilingual Obsidian note.
 
 Usage:
-  python clip.py <url> [--vault ~/Documents/obsidian/MyVault]
+  python clip.py <url> [--vault ~/Documents/obsidian/MyVault] [--dedup-only]
 
 Converts a web article or X/Twitter post into a bilingual (EN/CN) Obsidian note
 with YAML frontmatter, local images, and duplicate detection.
 Fixed EN→ZH: English articles translate to Chinese; Chinese articles save as-is.
+Dedup always runs first; --dedup-only stops after the check (no fetch/save).
 """
 
 import argparse
@@ -273,6 +274,7 @@ def main():
     parser.add_argument("--vault", default=DEFAULT_VAULT, help="Obsidian vault path")
     parser.add_argument("--author", default="", help="Author name override")
     parser.add_argument("--force", action="store_true", help="Skip duplicate check")
+    parser.add_argument("--dedup-only", action="store_true", help="Only check for duplicates, do not fetch/save")
 
     args = parser.parse_args()
     vault_dir = Path(args.vault).expanduser().resolve()
@@ -281,6 +283,17 @@ def main():
         print(f"Error: Vault directory does not exist: {vault_dir}")
         print("Create it first, or use --vault to specify a different path.")
         sys.exit(1)
+
+    # Step 0.5: Dedup-only mode — check duplicates and exit, no side effects
+    if args.dedup_only:
+        dupes = find_duplicate(vault_dir, args.url)
+        if dupes:
+            print(f"⚠️  This URL already exists in your vault:")
+            for d in dupes:
+                print(f"   {d}")
+            sys.exit(1)
+        print("✅ Not found — safe to clip")
+        sys.exit(0)
 
     # Step 1: Check duplicates
     if not args.force:
