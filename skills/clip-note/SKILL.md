@@ -20,7 +20,7 @@ Turn URLs into polished Obsidian notes — in your language. The production work
 clip https://example.com/article
 ```
 
-That's it. Hermes fetches, detects language, translates if needed, downloads images, and saves.
+That's it. Hermes checks for duplicates first, then fetches, detects language, translates if needed, downloads images, and saves.
 
 First-time setup: tell Hermes your Obsidian vault path once.
 
@@ -28,9 +28,13 @@ First-time setup: tell Hermes your Obsidian vault path once.
 
 When the user sends a URL or says `clip <url>`:
 
-### 0. Dedup
+### 0. Dedup (MANDATORY — do this first, before any fetch)
 
-Before any work, check if the source/canonical URL already exists in the vault. Search frontmatter `source:` values. If found → report filename, stop.
+Before ANY work, check if the source/canonical URL already exists in the vault. Search frontmatter `source:` values. If found → report filename, stop. Do not fetch, translate, or download anything until the dedup check passes.
+
+```bash
+rg -l --fixed-strings "<url>" <vault>   # or: python scripts/clip.py --dedup-only <url>
+```
 
 ### 1. Fetch Content
 
@@ -356,6 +360,7 @@ For atomic blocks in fragments:
 |---------|---------|----------|
 | Vault | `~/Documents/obsidian/Interpreter` | `--vault /path` |
 | Force re-clip | false | `--force` |
+| Dedup-only | false | `--dedup-only` |
 
 ## Pitfalls
 
@@ -388,7 +393,7 @@ For atomic blocks in fragments:
 
 ## Scripts
 
-- `scripts/clip.py` — fetch + dedup + language detection + image download + raw save
+- `scripts/clip.py` — dedup first (always) + fetch + language detection + image download + raw save; `--dedup-only` stops after the duplicate check
 - `scripts/dedup.sh` — quick vault duplicate scan
 - Gate scripts (in `interpreter-content-pipeline`): `gate.py` (unified; auto-detects X-bilingual / web / native / structural modes), `save-x-article.py` (Chinese-original X save helper)
 - `interpreter-content-pipeline/scripts/fxtwitter-parse.py` — full fxtwitter block dump + image resolution
