@@ -28,12 +28,19 @@ First-time setup: tell Hermes your Obsidian vault path once.
 
 When the user sends a URL or says `clip <url>`:
 
-### 0. Dedup (MANDATORY — do this first, before any fetch)
+### 0. Normalize URL → Dedup (MANDATORY — before any content fetch)
 
-Before ANY work, check if the source/canonical URL already exists in the vault. Search frontmatter `source:` values. If found → report filename, stop. Do not fetch, translate, or download anything until the dedup check passes.
+**0a. Normalize the URL first.** Dedup needs the **canonical URL**, not the link you were sent. Resolving the canonical URL is a lightweight step (seconds) — it is NOT article parsing:
+
+- **Direct article/X URLs** (`x.com/.../status/123`, blog posts) — already canonical, skip to 0b
+- **t.co / short / wrapper links** — resolve the canonical URL first: follow redirects (`curl -sIL`), or `web_search` for the canonical (e.g. `stripe.dev/blog/...`); only ask the user if search fails. **Never dedup against the wrapper URL** — the vault stores canonical `source:` values, so a wrapper search always misses
+- **Slax Reader X shares** (`r.slax.com/b/<id>`) — extract the canonical X URL from the Source link first
+- **r.jina.ai / reader wrappers** — strip the wrapper prefix, use the inner URL as canonical
+
+**0b. Dedup against the canonical URL.** Check if the source/canonical URL already exists in the vault. Search frontmatter `source:` values. If found → report filename, stop. Do NOT fetch, translate, or download anything until the dedup check passes.
 
 ```bash
-rg -l --fixed-strings "<url>" <vault>   # or: python scripts/clip.py --dedup-only <url>
+rg -l --fixed-strings "<canonical-url>" <vault>   # or: python scripts/clip.py --dedup-only <canonical-url>
 ```
 
 ### 1. Fetch Content
@@ -51,7 +58,7 @@ rg -l --fixed-strings "<url>" <vault>   # or: python scripts/clip.py --dedup-onl
 | **Talk/slide-deck pages** | Parse `article.talk` / `.talk-segment` with paired images, exclude nav/social-card chrome |
 | **Event pages (Goldcast, etc.)** | Parse `window.uberdata`, archive durable content only (title, abstract, speakers, bullets), strip registration chrome |
 | **PDF papers/reports** | Test text layer first (`pdftotext`, `web_extract`); if image-only → `pdftoppm` + `tesseract` OCR. Prefer canonical arXiv URL as `source`. For long surveys, create research-note archive (metadata, abstract, claims, taxonomy, key tables, limitations) rather than verbatim dump |
-| **t.co / wrapper links** | Try web_search for the canonical URL first (e.g. `stripe.dev/blog/...`); only ask the user if search fails — do not bypass redirect security |
+| **t.co / wrapper links** | Already canonicalized in step 0a — fetch the canonical URL directly |
 
 **Fxtwitter retry pattern:** `curl` may fail with TLS EOF under proxy. Retry chain:
 1. `curl -sL --max-time 30 -x http://127.0.0.1:7890 "https://api.fxtwitter.com/status/<ID>"` → `/tmp/x_<ID>.json`
@@ -350,7 +357,7 @@ For X Articles with 100+ blocks or web articles over 20k chars:
 
 For atomic blocks in fragments:
 - MARKDOWN → original fenced block, no Chinese partner
-- MEDIA → placeholder for parent localization  
+- MEDIA → placeholder for parent localization
 - DIVIDER → `---` only if substantive
 - TWEET → bilingual embedded-tweet URL line
 
