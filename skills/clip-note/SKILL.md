@@ -198,6 +198,7 @@ type: clipper
 Rules:
 - Strings double-quoted; dates unquoted; datetimes quoted
 - `summary` always Chinese-only, <250 chars, single line
+- **Summary style — structured + de-AI'd (RIA 干货式 + 去 AI 味)**: not a dense paragraph — lead with the core conclusion, then 3-4 concrete tool cards (concept in plain words, key tools/steps, actionable checklist). Use bold labels and lists for scannability. Write it so it reads like a person wrote it: natural connectors (「读完最值得记住的一句」「一句话理解」「想落地就做三件事」), no AI-isms (值得注意的是/总而言之/赋能/抓手/沉淀/闭环), no filler. Count chars with whitespace stripped; newlines inside the YAML field are fine.
 - `description` single line only — collapse whitespace
 - Empty values → omit property entirely
 - `type: clipper` always present (no quotes)
