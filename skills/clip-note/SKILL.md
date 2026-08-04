@@ -198,7 +198,7 @@ type: clipper
 Rules:
 - Strings double-quoted; dates unquoted; datetimes quoted
 - `summary` always Chinese-only, **<200 chars** (whitespace-stripped), single line
-- **Summary style — structured + de-AI'd (RIA 干货式 + 去 AI 味)**: not a dense paragraph — use `**bold labels**` inline to break text into scannable segments. Format: `**核心**` (one-sentence conclusion first), `**拆解**` (2-3 concrete points), `**行动**` (what to do next). No fixed opening phrase like 「读完最值得记住的一句」. No AI-isms (值得注意的是/总而言之/赋能/抓手/沉淀/闭环). Read aloud — if it sounds like a template, rewrite. No `——`, no protected terms inside summary.
+- **Summary style — structured + de-AI'd (RIA 干货式 + 去 AI 味)**: not a dense paragraph. NO paradigm label words (no `**核心**`/`**拆解**`/`**行动**`/`R`/`I`/`A` tags); distinguish parts by CONTENT and separate them with appropriate line breaks (2-4 short paragraphs). First paragraph = conclusion first (one sentence). Middle paragraphs = 2-3 concrete points (concepts, tool cards, scenarios). Last paragraph = what to do next. No fixed opening phrase like 「读完最值得记住的一句」. No AI-isms (值得注意的是/总而言之/赋能/抓手/沉淀/闭环). Read aloud — if it sounds like a template, rewrite. No `——`, no protected terms inside summary.
 - `description` single line only — collapse whitespace
 - Empty values → omit property entirely
 - `type: clipper` always present (no quotes)
