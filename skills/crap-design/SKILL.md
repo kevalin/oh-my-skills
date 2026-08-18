@@ -1,200 +1,199 @@
 ---
 name: crap-design
-description: Universal CRAP design rules from "The Non-Designer's Design Book" (Robin Williams) — Contrast, Repetition, Alignment, Proximity plus type and color laws, with checklists for validating any layout, typography, color, or cover design before delivery. Use whenever designing or reviewing any visual artifact.
+description: Universal CRAP design rules from "The Non-Designer's Design Book" (Robin Williams) — Contrast, Repetition, Alignment, Proximity plus type and color laws, with validation checklists for any layout, typography, color, or visual design. Use whenever designing or reviewing any visual artifact (poster, flyer, card, slide, page, cover, chart).
 platforms: [linux]
 ---
 
-# CRAP 设计铁律（《写给大家看的设计书》Robin Williams 深度提炼）
+# CRAP Design Rules (from "The Non-Designer's Design Book" by Robin Williams)
 
-> 用途：约束/校验任何设计的布局、字体、排版、颜色（封面、卡片、页面、海报、PPT、图表）。2026-08-18 用户立为铁律。
-> 先明确信息结构，再谈美化——布局是信息结构的外化，不是装饰。
+Universal rules for constraining and validating any design's layout, typography, and color.
+First understand the information structure, then beautify — layout is the externalization of information structure, not decoration.
 
-## 总纲
+## Overview
 
-- **设计的第一件事：明确信息结构**——哪些内容属于一组、谁是主角，先想清楚
-- **学会"说出名字"就能控制它**：给设计元素命名（对齐轴、重复元素、对比档位），看得见问题才有权改它
-- **留白不是浪费**——它是设计的呼吸空间，也是亲密性（分组）的主要手段
-- 四原则协同工作：**亲密性分组，对齐连线，重复统一，对比分级**
-
----
-
-## ① 亲密性 Proximity（实现组织性）
-
-**根本目的**：让信息组织化，读者一眼看出"哪些是一伙的"。
-
-**如何实现**：
-- 相关的项物理位置互相靠近，成为一个**视觉单位**
-- 判断方法：视线扫一遍，数数页面被分成几组——分组应清晰有逻辑
-- 留白是建立分组的主要工具（分隔靠"距离"，不靠线条）
-
-**要避免**：
-- 无关元素放太近（被误认为一组）
-- 所有元素平均分布（没有组 = 混乱）
-- **组内距 < 组间距**（否则分组失效）
-
-**校验**：
-- [ ] 每个逻辑组是否凝聚成一个视觉单位？
-- [ ] 组间距明显大于组内距？
-- [ ] 无无关元素误归组？
+- **First step of any design: clarify the information structure** — what belongs together, who is the protagonist
+- **Name it to control it**: give design elements names (alignment axis, repeating elements, contrast levels) — you can only fix what you can see
+- **White space is not wasted** — it is breathing room and the primary tool for grouping (Proximity)
+- The four principles work together: **Proximity groups, Alignment connects, Repetition unifies, Contrast ranks**
 
 ---
 
-## ② 对齐 Alignment（统一而有条理）
+## ① Proximity — Achieve Organization
 
-**根本目的**：页面统一有条理。每个元素都与另一元素有**视觉联系**（即使物理分离，也有一条看不见的线）。
+**Goal**: organize information so the reader instantly sees "what belongs together".
 
-**如何实现**：
-- 找一条明确对齐线（左轴/右轴/中轴），所有元素挂上去
-- 左对齐最常用最易读；右对齐有形式感
-- **居中对齐是最弱对齐**——日常设计避免（正式场合：证书/请柬才用）
-- 刻意打破对齐时要故意且明显（否则像错误）
+**How**:
+- Physically group related items into one **visual unit**
+- Test: scan the page and count how many groups you see — grouping should be clear and logical
+- White space is the primary grouping tool (separate by distance, not by rules/lines)
 
-**要避免**：
-- **混合多种对齐方式**（左轴里混居中 = 最典型菜鸟错误）
-- 避免居中（除非正式庄重场合）
-- "差不多对齐" = 没对齐
+**Avoid**:
+- Unrelated elements too close (they get read as one group)
+- All elements evenly distributed (no groups = chaos)
+- **Intra-group spacing must be smaller than inter-group spacing** (otherwise grouping fails)
 
-**校验**：
-- [ ] 页面只有一个主对齐轴？
-- [ ] 每个元素都能找到对齐参照物？
-- [ ] 基线/边距/装饰线在同一条看不见的线上？
-
----
-
-## ③ 重复 Repetition（统一与增强）
-
-**根本目的**：统一全页，增强视觉效果。
-
-**如何实现**：
-- 重复视觉要素：颜色、形状、材质、空间关系、线宽、字体、字号、图片风格
-- 没有可重复元素时**主动创建一个**（统一装饰符号/配色/线条语言）
-- **同一逻辑层级必须同一套视觉语言**（所有标题一种样式、所有重点一种标记）
-
-**要避免**：
-- **过度重复**（复读 ≠ 统一，会单调烦人）
-- 重复不够（每个元素都长得不一样，页面散架）
-
-**校验**：
-- [ ] accent 色/字体/线条语言出现 ≥2 处？
-- [ ] 同一层级（所有标题/所有重点）完全同一样式？
-- [ ] 无重复到审美疲劳的元素？
+**Checklist**:
+- [ ] Does each logical group cohere into one visual unit?
+- [ ] Is inter-group spacing clearly larger than intra-group spacing?
+- [ ] Are there unrelated elements wrongly grouped?
 
 ---
 
-## ④ 对比 Contrast（吸引眼球 + 组织信息）
+## ② Alignment — Unified and Ordered
 
-**核心法则**：**两个元素如果不完全相同，就让它们截然不同**。几乎相同不是对比，是**冲突**（Conflict）——最糟状态：读者困惑"这俩一样还是不一样？"
+**Goal**: page unity and order. Every element has a **visual connection** to another element on the page (an invisible line connects them even when physically separated).
 
-**对比维度**：
-- 大字体 vs 小字体（最容易）
-- 典雅衬线体 vs 粗壮无衬线体（字体对比）
-- 细线 vs 粗线（线宽）
-- 冷色 vs 暖色（颜色）
-- 平滑 vs 粗糙（材质）
-- 水平 vs 垂直（方向）
-- 宽行距 vs 紧凑（空间）
-- 小图 vs 大图（尺寸）
+**How**:
+- Pick one clear alignment line (left axis / right axis / center axis) and hang all elements on it
+- Left alignment is most common and readable; right alignment has formality
+- **Center alignment is the weakest** — avoid for everyday design (reserve for formal occasions: certificates, invitations)
+- Deliberate breaks of alignment must be intentional and obvious (otherwise it reads as a mistake)
 
-**要避免**：
-- "几乎相同"的对比（18px vs 16px 标题 = 排版事故）
-- **对比过多**（如果一切都突出，就什么也不突出）
-- 用对比破坏层级（次要信息比主角显眼）
+**Avoid**:
+- **Mixing multiple alignment styles** (center inside a left-aligned layout = the classic beginner error)
+- Center alignment (unless formal)
+- "Almost aligned" = not aligned
 
-**校验**：
-- [ ] 字号层级拉开 ≥3 档（如 128/40/20/16）？
-- [ ] 颜色对比足够（深底白字）？
-- [ ] 第一眼看到主角？
+**Checklist**:
+- [ ] Is there only one primary alignment axis on the page?
+- [ ] Can every element find its alignment reference?
+- [ ] Do baselines, margins, and decoration lines sit on the same invisible line?
 
 ---
 
-## ⑤ 字体铁律
+## ③ Repetition — Unify and Strengthen
 
-**三态**：
-| 状态 | 定义 | 效果 |
+**Goal**: unify the whole page, strengthen visual effect.
+
+**How**:
+- Repeat visual elements: color, shape, texture, spatial relationship, line weight, font, size, image style
+- If the page has nothing to repeat, **create a repeatable element** (a unifying symbol, palette, or line language)
+- **The same logical level must use the same visual language** (all headings one style, all highlights one marker)
+
+**Avoid**:
+- **Over-repetition** (repetition serves unity, not monotony)
+- Under-repetition (every element looks different — the page falls apart)
+
+**Checklist**:
+- [ ] Does the accent color/font/line language appear ≥2 times?
+- [ ] Is every element at the same level (all headings / all highlights) in exactly the same style?
+- [ ] Any element repeated to the point of fatigue?
+
+---
+
+## ④ Contrast — Attract the Eye and Organize Information
+
+**Core rule**: **If two elements are not the same, make them very different.** Almost-the-same is not contrast, it is **Conflict** — the worst state: the reader wonders "are these the same or not?"
+
+**Contrast dimensions**:
+- Large type vs small type (easiest)
+- Elegant serif vs bold sans-serif (typeface contrast)
+- Thin line vs thick line (line weight)
+- Cool color vs warm color (color contrast)
+- Smooth vs rough (texture)
+- Horizontal vs vertical (direction, e.g. a long line of text vs a tall narrow column)
+- Wide spacing vs tight spacing (space)
+- Small image vs large image (size)
+
+**Avoid**:
+- "Almost different" contrast (18px heading vs 16px body = a typographic accident)
+- **Too much contrast** (if everything stands out, nothing stands out)
+- Contrast that breaks hierarchy (secondary info more prominent than the protagonist)
+
+**Checklist**:
+- [ ] Are type sizes separated into ≥3 clear levels (e.g. 128/40/20/16)?
+- [ ] Is color contrast sufficient (white on dark, dark on light)?
+- [ ] Does the eye land on the protagonist first?
+
+---
+
+## ⑤ Typography Rules
+
+**Three states of type**:
+| State | Definition | Effect |
 |---|---|---|
-| 协调 Concord | 一种字体/同家族 | 安全平静单调 |
-| **冲突 Conflict** | 两种字体但几乎相同 | ❌ 最糟 |
-| 对比 Contrast | 两种字体截然不同 | ✅ 目标 |
+| Concord | One typeface (or one family) | Safe, calm, monotonous |
+| **Conflict** | Two typefaces but almost the same | ❌ Worst state |
+| Contrast | Two typefaces clearly different | ✅ Goal |
 
-**六原则**：
-1. **每页 ≤2 种字体**（或一家族不同字重）
-2. **一致性**：相同性质内容用相同字体/大小/粗细
-3. **对比强烈**：两种字体鲜明区分（大小/衬线/字重）
-4. **不过度装饰**：少斜体、少下划线、少花哨
-5. **字距行距**：字距过紧/过松伤可读性；行距 ≥1.2 倍字号
-6. **风格一致**：字体个性匹配内容气质（别给严肃内容用花哨字体）
+**Six type rules**:
+1. **≤2 typefaces per page** (or one family in different weights)
+2. **Consistency**: the same kind of content uses the same typeface/size/weight
+3. **Contrast strongly**: if two typefaces, differentiate them clearly (size / serif-vs-sans / weight)
+4. **No over-decoration**: few italics, few underlines, few ornaments
+5. **Watch kerning and leading**: too-tight or too-loose hurts readability; leading ≥1.2× type size
+6. **Consistent personality**: typeface personality must match content (don't use playful fonts for serious content)
 
-**校验**：
-- [ ] 字体 ≤2 种？
-- [ ] 同层级完全一致？
-- [ ] 两种字体"截然不同"？
-- [ ] 字体个性匹配内容？
-- [ ] 行距 ≥1.2 倍字号？
+**Checklist**:
+- [ ] ≤2 typefaces?
+- [ ] Same level entirely consistent?
+- [ ] Two typefaces "clearly different"?
+- [ ] Typeface personality matches content?
+- [ ] Leading ≥1.2× type size?
 
 ---
 
-## ⑥ 颜色铁律
+## ⑥ Color Rules
 
-**色轮关系**：
-| 关系 | 构成 | 效果 |
+**Color wheel relationships**:
+| Relationship | Composition | Effect |
 |---|---|---|
-| 互补色 | 180° 对立 | 对比最强、鲜明刺激；点缀互补 = 点睛 |
-| 三色组 | 等距三角 | 平衡丰富 |
-| 类似色 | 相邻 | 和谐安全低对比 |
-| 单色 | 同色相明度/饱和度变化 | 简洁统一高级 |
+| Complementary | 180° opposite | Strongest contrast, vivid; accent complementary = pop |
+| Triadic | Equilateral triangle | Balanced, rich |
+| Analogous | Adjacent | Harmonious, safe, low contrast |
+| Monochromatic | One hue in lightness/saturation variations | Clean, unified, elegant |
 
-**四维对比（比色相更重要）**：
-1. **明度对比（最重要）**——深浅反差决定可读性；白字深底/深字浅底
-2. 色相对比
-3. 饱和度对比（高饱和在灰调上极突出）
-4. 冷暖对比（**暖色前进、冷色后退**——暖色抢视线，冷色当背景）
+**Four contrast dimensions (more important than hue contrast)**:
+1. **Value/lightness contrast (most important)** — dark-light contrast determines readability; white on dark, dark on light
+2. Hue contrast
+3. Saturation contrast (high saturation pops on muted backgrounds)
+4. Warm-cool contrast (**warm advances, cool recedes** — warm grabs attention, cool recedes to background)
 
-**规则**：
-- 主色 ≤3（不含黑白灰中性色）
-- 同功能同色（一致性）
-- **先定明度关系，再谈色相**（明度错=看不清）
-- **中性色会被主色染偏**：画面只有红黄黑时，灰色会显得发蓝——注意灰/黑/白的"偏色"
+**Rules**:
+- ≤3 main colors (excluding neutral black/white/gray)
+- Same function, same color (consistency)
+- **Set value/lightness first, hue second** (wrong value = unreadable)
+- **Neutral colors get tinted by the dominant hue**: in a red/yellow/black-only composition, gray appears bluish — watch for "off-tint" neutrals
 
-**校验**：
-- [ ] 颜色 ≤3？
-- [ ] 文字背景明度差足够？
-- [ ] 强调色全局一致？
-- [ ] 暖色主角/冷色背景？
-- [ ] 中性色无异常偏色？
+**Checklist**:
+- [ ] ≤3 colors?
+- [ ] Sufficient value contrast between text and background?
+- [ ] Accent color consistent globally?
+- [ ] Warm protagonist / cool background?
+- [ ] No abnormal tint on neutrals?
 
 ---
 
-## 设计流程（综合应用）
+## Design Process
 
 ```
-1. 先理解信息：内容结构？谁和谁一组？谁是主角？
-2. 建立对齐轴：选一个主对齐方式，全页统一
-3. 建立重复语言：配色/字体/线条的重复系统
-4. 拉对比：标题/正文/强调的字号、字重、颜色档位拉开
-5. 留白收尾：用间距完成分组，让页面呼吸
-6. 校验：对照以上清单逐条过
+1. Understand the information: structure? who groups with whom? who is the protagonist?
+2. Establish the alignment axis: one primary alignment, unified across the page
+3. Establish the repetition language: the color/type/line repetition system
+4. Pull contrast: separate heading/body/emphasis type sizes, weights, and colors
+5. Finish with white space: complete grouping with spacing, let the page breathe
+6. Validate: run every checklist above
 ```
 
-**设计评审工作流**：拿到任何设计稿（他人作品或自己的产出）→ 按 ①-⑥ 逐条对照清单 → 指出违规（引用原则名 + 书中的"要避免"）+ 给修改方向 → 修正后复检。评审结论格式：`违规项（原则+清单条号）→ 问题描述 → 修改建议`。
+**Review workflow**: take any design (yours or someone else's) → check every item ①-⑥ → name violations (cite the principle + the "avoid" item) + give fix direction → re-check after fixing. Report format: `Violation (principle + checklist item) → problem description → fix suggestion`.
 
-### 实战案例（2026-08-18 书籍封面评审——真实违规与修复）
+### Example violations and fixes (generic scenarios)
 
-**案例 1：Proximity 亲密性——注解信息被误归组**
-- 违规：钩子（书名注解"生活不是配乐，是主旋律"）距底部出版社组 100px < 距书名组 280px——物理距离把逻辑归属搞反了
-- 修复：钩子移入书名组（间距 30-44px），语义=书名注解
-- 教训：**组间距必须由逻辑关系决定，不能随手摆**；模糊距离（70-100px）两头不靠，是错误状态
+**Case 1: Proximity — annotation wrongly grouped**
+- Violation: an annotation line (explaining the headline) placed closer to the footer contact block than to the headline — physical distance inverted the logical relationship
+- Fix: move the annotation into the headline group (spacing 30–44px)
+- Lesson: **inter-group spacing must follow logical relationships, not convenience**; ambiguous distances (~70–100px) are an error state
 
-**案例 2：Contrast 对比——字号档位"几乎相同"**
-- 违规：kicker 16px / 副题 17px / 出版社 15px——三个不同层级字号几乎相同 = 书中"冲突"典型
-- 修复：拉开成 20 / 16 / 14 三档（相邻差 ≥4px 或 ≥1.25 倍）
-- 教训：**层级靠字号拉开，不能只靠颜色/字距区分**——颜色在缩略图下会糊，字号差不会
+**Case 2: Contrast — type sizes "almost the same"**
+- Violation: kicker 16px / subtitle 17px / footer 15px — three different levels with nearly identical sizes = the book's "Conflict" case
+- Fix: separate to 20 / 16 / 14 (adjacent gap ≥4px or ≥1.25×)
+- Lesson: **levels must be separated by type size, not only color/letter-spacing** — color blurs in thumbnails, size difference does not
 
-**案例 3：Alignment 对齐——双轴混用**
-- 违规：系列标签居中 + 书名板内左对齐 + 钩子居中 = 居中轴与左轴混用
-- 修复：统一居中轴（摄影集式对称构图）
-- 教训：**一个页面一个主对齐轴**，哪怕"每个局部看起来都挺对齐"——跨区混轴就是违规
+**Case 3: Alignment — mixed axes**
+- Violation: top label centered + body left-aligned + footer centered = center axis mixed with left axis
+- Fix: unify on one axis (e.g. all-centered symmetric composition)
+- Lesson: **one page, one primary alignment axis** — even if every local region "looks aligned", mixing axes across regions is a violation
 
-## 相关
+## License
 
-- 封面应用实例：`book-cover-unsplash` skill（内容驱动风格决策 + 封面出图必检流程）
-- 文字去 AI 味：`humanizer` / `proofreader` skill
+MIT — usable by any agent (Claude Code, Codex, OpenCode, Gemini CLI, Hermes Agent, etc.) with no platform-specific runtime.
