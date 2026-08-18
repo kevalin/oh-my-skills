@@ -176,7 +176,7 @@ def check_orphans(body: str) -> list[str]:
     return issues
 
 
-def check_residue(text: str, x_mode: bool = False) -> list[str]:
+def check_residue(text: str, x_mode: bool = False, check_protected: bool = True) -> list[str]:
     issues: list[str] = []
     if x_mode:
         if UI_RE.search(text):
@@ -194,7 +194,7 @@ def check_residue(text: str, x_mode: bool = False) -> list[str]:
         issues.append("unbalanced fenced code blocks")
     if x_mode and ("——" in text or re.search(r"[\u4e00-\u9fff]—|—[\u4e00-\u9fff]", text)):
         issues.append("Chinese em dash found; verify the source also used a dash")
-    if PROTECTED_TERM_RE.search(text):
+    if check_protected and PROTECTED_TERM_RE.search(text):
         issues.append("possible protected AI term translated into Chinese")
     return issues
 
@@ -326,7 +326,7 @@ def gate_file(args) -> int:
 
     if native:
         issues.extend(check_frontmatter(text, REQUIRED_KEYS_NATIVE, allow_skip_related=False, check_format=True))
-        issues.extend(check_residue(text))
+        issues.extend(check_residue(text, check_protected=False))
         issues.extend(check_images(text, path.parent, args.expect_images, local_only=True))
         if args.json:
             cta = re.compile(CTA_RE.pattern + ("|" + args.skip_cta_regex if args.skip_cta_regex else ""), re.I)

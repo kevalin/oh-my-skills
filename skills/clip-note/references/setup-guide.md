@@ -82,7 +82,7 @@ python scripts/clip.py <url> --dedup-only
 
 If the source is already Chinese:
 
-```bash
+```
    Source language: zh | Translate: False
 ```
 
