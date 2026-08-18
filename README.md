@@ -9,8 +9,8 @@ Built by [K L](https://github.com/kevalin). Works with any coding agent (Claude 
 | Skill | Description | Status |
 |-------|-------------|--------|
 | [clip-note](skills/clip-note/) | Turn any URL into a polished bilingual (EN/CN) Obsidian note. Fixed EN→ZH: English articles translate to Chinese, Chinese articles save as-is. Local images, duplicate detection, validation gates. | 🟢 Production (390+ notes archived) |
-| [crap-design](skills/crap-design/) | Universal CRAP design rules from "The Non-Designer's Design Book" (Robin Williams) — Contrast, Repetition, Alignment, Proximity plus type and color laws, with validation checklists for any layout, typography, color, or cover design. Includes real violation-fix cases. | 🟢 Production |
-| [storm-research](skills/storm-research/) | AI-assisted multi-perspective deep research (STORM): pin the question, parallel perspective research, cross-validation, contradiction map, verdict-first synthesis with evidence labels, and peer review. Covers deep research reports, business feasibility, website teardowns, company due diligence, and article/paper briefings. | 🟢 Production |
+| [crap-design](skills/crap-design/) | Universal CRAP design rules from "The Non-Designer's Design Book" (Robin Williams) — Contrast, Repetition, Alignment, Proximity plus type and color laws, with validation checklists for any layout, typography, color, or visual design. Includes real violation-fix cases. | 🟢 Production |
+| [chinese-color-palettes](skills/chinese-color-palettes/) | 16 traditional Chinese color palettes (中国传统色) from colors.app.stdrc.cc — 5 roles each (background/text/primary/accent/auxiliary) with exact HEX values, mood-matching guide, and color rules. | 🟢 Production |
 
 ## Quick Start
 
