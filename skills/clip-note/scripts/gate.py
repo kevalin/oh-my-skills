@@ -156,9 +156,10 @@ def check_residue(text: str, x_mode: bool = False, check_protected: bool = True)
         issues.append("HTML comment/placeholder remains")
     if text.count("```") % 2:
         issues.append("unbalanced fenced code blocks")
-    if "——" in text:
+    text_no_links = re.sub(r"\[\[[^\]]+\]\]", "", text)
+    if "——" in text_no_links:
         issues.append("Chinese em dash found; replace with ： or ， or 。")
-    if check_protected and PROTECTED_TERM_RE.search(text):
+    if check_protected and PROTECTED_TERM_RE.search(text_no_links):
         issues.append("possible protected AI term translated into Chinese (智能体|提示词|资源)")
     return issues
 
