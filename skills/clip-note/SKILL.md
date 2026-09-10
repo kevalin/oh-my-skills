@@ -1,7 +1,7 @@
 ---
 name: clip-note
-description: "Clip any web article or X/Twitter post into an Obsidian note. Fixed EN→ZH pipeline: English articles translate to Chinese, Chinese articles save as-is. Produces bilingual EN/CN notes with YAML frontmatter, local images, duplicate detection, and validation gates."
-version: 2.1.0
+description: "Clip any web article or X/Twitter post into Obsidian. Decoupled EN/ZH pipeline: English source archived to sources/<EN_Title>.md, Chinese translation published to <ZH_Title>.md with Cloudflare R2 images and Frontmatter cross-linking. Chinese articles save directly to root. No <br> mixing."
+version: 3.0.0
 platforms: [linux, macos]
 metadata:
   hermes:
@@ -10,9 +10,13 @@ metadata:
 
 # Clip-note
 
-Turn URLs into polished Obsidian notes — in your language. The production workflow that powers a 390+ note knowledge base.
+Turn URLs into polished Obsidian notes — in your language. Decoupled English source archive (`sources/`) and Chinese translation (`/`) architecture powered by Cloudflare R2 image hosting.
 
-> **Design constraints (user-mandated, 2026-07):** 小而美 — do NOT generalize. Fixed language pair **EN→ZH** only (no language-parameter framework, no polyglot/multi-language abstractions). One URL in, one bilingual note out. Keep the package small: consolidation of the gate scripts into fewer entry points is an approved direction; expansion/generalization is not.
+> **Design constraints (user-mandated, 2026-09):** 
+> 1. **彻底解耦 EN 与 ZH**：英文原文以原始英文标题存入 `sources/<Original EN Title>.md`；中文译本以中文标题直接存入 Vault 根目录 `<Chinese Title>.md`；中文原生文章（`source=zh`）直接放入根目录，不重复生成。
+> 2. **彻底告别 `<br>`**：英文与中文各自为完全独立的纯单语 Markdown 渲染，中文采用自然段落叙事并经过去 AI 味清洗。
+> 3. **Frontmatter 层面双向互通**：中文侧通过 `source_note: "[[sources/...]]"` 与 `original_title:` 记录原文；英文侧通过 `translation_note: "[[...]]"` 回链中文。
+> 4. **Cloudflare R2 图床自动化**：文章图片资产统一自动上传至 Cloudflare R2 存储桶 `obsidian`（前缀 `interpreter-image/`），双方共用公网 CDN 链接：`https://pub-<r2-subdomain>.r2.dev/interpreter-image/...`。
 
 ## Quick Start
 
@@ -164,20 +168,12 @@ EntityMap resolution:
 
 **Atomic blocks are NOT always images — detect code-block atomics BEFORE counting media** (learned 2026-08-10, knoxtwts "how to master AI marketing in 30 days" 91 blocks): the article had 11 `atomic` blocks that looked like inline media but were actually fenced CODE blocks. Detection signals: (a) `media_entities` list is EMPTY while `entityMap` entries carry `data.markdown` (the atomic block's `entityRanges[].key` resolves to a markdown-carrying entity — sometimes typed `LINK` with a `markdown` payload, not `MARKDOWN`), and (b) atomic block `text` is blank (`' '`). When confirmed: extract each code block with `emap = {e['key']: e['value']['data'].get('markdown','') for e in entityMap}`, render verbatim as fenced blocks at the atomic position (single-language, no `<br>` partner, no translation), and gate with `--expect-images 0` — blank-text atomics are skipped by source coverage (`text_blocks` filters on non-empty text), so no EN-side coverage obligation and no image count. Never download anything for these. If atomic blocks exist but you haven't resolved their entityMap keys, you can't tell images from code — resolve first, count media_entities second.
 
-### 4. Translate
+### 4. Translate & Content Formatting
 
-**Format rule — every content block uses `<br>` on one line:**
-
-```
-## English Heading<br>中文标题
-
-English paragraph text.<br>中文翻译。
-
-1. English list item<br>中文列表项
-- English bullet<br>中文子弹
-
-> English quote<br>中文引用
-```
+**Decoupled Structure — 彻底解耦，告别 `<br>`:**
+- **`en` 原文侧**：纯英文原汁原味全文 Markdown，放入 `sources/<Original EN Title>.md`，包含所有原始代码块、列表、图片。
+- **`zh` 译文侧**：纯中文自然段落全文 Markdown，放入 `<Chinese Title>.md`，采用高质量翻译，去 AI 味，无任何 `<br>` 分隔。
+- **中文原生文章（source=zh）**：直接放入根目录 `<Chinese Title>.md`，不重复生成英文文件。
 
 **Exact forms with no translation:**
 - Code blocks (``` fences), inline code (`backticks`), command lines starting with `/`
@@ -191,190 +187,169 @@ English paragraph text.<br>中文翻译。
 Match the **exact original form** from the English source — hyphenation, capitalization, pluralization. Never normalize.
 
 **Translation quality:**
-- Before translating, load the `humanizer` skill (`creative/humanizer`) — strip AI-isms at a global level, not just individual words.
+- Before translating, load the `humanizer` skill (`creative/humanizer`) and `deai-ify` skill — strip AI-isms at a global level.
 - Contextual, not word-for-word. Read like natural Chinese.
-- Strip AI-isms: no "值得注意的是", "总而言之", "让我们", "众所周知", "在这个快速发展的时代".
-- No Chinese em-dashes (`——`) ANYWHERE in bilingual X notes — **gate.py's x_mode check is unconditional**: `if x_mode and ("——" in text ...)` fires on the mere presence of `——`, even when the EN side legitimately has `—`/`–`/` - ` (e.g. list items `1. Reference signal (the goal) – ...<br>参考信号（目标）——...` still FAIL). The skill's old "unless EN has a dash" rule is aspirational, not what the gate enforces. Practical substitutions: explanatory → `：` or `，`; contrast → `，` or `。`; quote attributions (`——Naval`) → single `—Naval` (a lone `—` doesn't trip the `——` literal check). Check with `grep -c '——' note.md` before gating — must be 0. **The check scans the WHOLE file**, so `——` inside the frontmatter `summary` FAILs too (thedankoe 2026-08 — summary line was the last remaining hit). **One line can carry two `——`** and a targeted `replace()` fixes only the matched substring — after any em-dash pass, iterate `grep -c '——'` until it returns 0 (hit twice on one line in ridark_eth 2026-08: `你保留判断——…机器承担数量——…`).
-- Escape bare `$` → `\$` outside code blocks — **mode-specific: only web mode (`--source-text`) and `--audit` enforce this; the X-bilingual main gate SKIPS the bare-`$` check** (verified 2026-08-09, thedankoe block 148 `$100m` kept verbatim → gate PASS). In X-bilingual (`--json`) runs, keeping `$` verbatim is the coverage-safe choice (EN side byte-exact, no escape noise in the note). If the note must also survive future vault-wide `--audit` scans, `\$` is equally coverage-safe: the word-overlap tokenizer treats `\$100m` and `$100m` as the same `$100m` token, so escaping costs nothing but a rendered escape sequence.
-- "代理公司/代理服务" = business agency, keep in Chinese. All other 代理 in AI context → `agent`
-- **"Resources:" heading → translate as 资料/参考, NOT 资源** (learned 2026-08-01, free_ai_guides article): `资源` is in `PROTECTED_TERM_RE` (compact list `智能体|提示词|资源`), so a perfectly correct translation of the common "Resources:" section heading trips `possible protected AI term translated into Chinese` on bilingual notes. Same for narrative "resources" → use 资料/支持/参考 depending on context (e.g. `engineering resources` → 工程力量, `best resourced` → 投入最大). Reserve 资源 for cases where no synonym reads naturally. **This also fires on the frontmatter title**: translating "43 Free Resources Inside" as `43 个免费资源` in the `<br>` title tripped it too (undefinedki 2026-08) — use 免费资料/免费参考 in titles and summaries as well. **Body-translation hits where the EN term is on the keep-English terminology list revert to English, not a synonym** (learned 2026-08-02, posthog "as resources and slash commands"): when the flagged word is a protocol/technical term (`resource`/MCP resources, `prompt`, `tool`), the cleanest fix is restoring the English original (`作为 resources 和斜杠命令`), which is both accurate and gate-clean — the terminology list in §4 explicitly keeps these words in English. This beats hunting a Chinese synonym that reads wrong. **Resource synonyms in non-protocol contexts (2026-08-09, incentivising + thedankoe notes): `the rare resource` → 稀缺品, `raw resources` (France 1940, military matériel) → 原始物资. When a body hit is NOT protocol-speak, pick a contextual synonym first (资料/参考/条件/物资/稀缺品); only revert to English when the term is genuinely on the keep-English list.**
-- **"AI 公司" 语义区分**: when the source says "AI company" but actually means application-layer companies → translate as `AI 应用型公司`. Only use `大模型公司` / `基础模型公司` when explicitly referring to OpenAI/Anthropic-style foundation-model companies. Never use the vague catch-all `AI 公司`.
+- Strip AI-isms: no "值得注意的是", "总而言之", "让我们", "众所周知", "在这个快速发展的时代", no 赋能/打造/助力/闭环/抓手/沉淀.
+- No Chinese em-dashes (`——`) ANYWHERE in notes. Practical substitutions: explanatory → `：` or `，`; contrast → `，` or `。`.
+- "代理公司/代理服务" = business agency, keep in Chinese. All other 代理 in AI context → `agent`.
+- "Resources:" heading → translate as 资料/参考, NOT 资源.
+- "AI 公司" 语义区分: 大模型公司 vs AI 应用型公司.
 
 **CTA/UI stripping — remove from output:**
 - "Follow me @handle", "Sign up for newsletter", "hope this was useful"
 - "Want to publish your own Article?", "Upgrade to Premium"
 - Like/repost/view/bookmark counts and metrics
-- "Trending now", footer links, copyright notices
-- Author bio, follower stats
-- "Install/try/buy this product today"
-
-**CTA handling in gates**: gate.py accepts `--skip-cta-regex "pat1|pat2"` to exclude CTA blocks from source-coverage accounting (e.g. `"bootcamp|Eden|MyMind|Kortex"` for a self-promo block, or the transition sentence `"Skip to the rest|allergic to self-promotion"` that introduces a stripped promo section — it's part of the promo unit, so stripping the promo without skipping its lead-in line fails coverage). Simpler than building a `_nocta.json`; prefer it when the CTA blocks are few and identifiable by regex. Learned 2026-08-01 (thedankoe article): article-length product pitches (Kortex/Eden/MyMind) need their own skip patterns — don't try to keep them in the note just to satisfy coverage. **Full advertorials (e.g. "Thanks Higgsfield for sponsoring this article", AnatoliKopadze 2026-07) are different**: the sponsored content IS the article body and often the value (18 copy-paste prompts) — keep the body, translate it, and skip only the explicit sponsor line (`--skip-cta-regex "sponsor|Higgsfield|Supercomputer"`). Distinguish "promo section inside an article" (strip) from "article that is a promo" (keep body, skip the sponsor disclosure). **CTA tail AFTER the author signoff = strip as one unit** (learned 2026-08-09, thedankoe "The Art Of Strategic Thinking" 239 blocks): everything after a closing `– Dan` / `— Author` / "Talk soon" signoff is almost always a product push (Eden promo blocks 236-238: `try out Eden here|you can use Eden to research|ultimate advantage so standing out`) — strip it all and cover the tail's lead-ins with ONE `--skip-cta-regex`. Contrast with promo sentences EMBEDDED in substantive blocks (block 132's "I made a little bot… free here" inside a vision-example paragraph): those blocks stay WHOLE and get translated, because coverage requires the full block (see tail-trim pitfall). The signoff is the boundary: before it = article (keep whole), after it = promo tail (strip as a unit).
+- "Trending now", footer links, copyright notices, author bios, product promos.
 
 ### 5. YAML Frontmatter
 
+#### 英文原文（`sources/<Original EN Title>.md`）:
 ```yaml
 ---
-title: "English Title<br>中文标题"
-source: "https://original.url"
+type: clipper
+title: "Original EN Title"
+source: "https://x.com/..."
 author:
-  - "[[Author Handle]]"
-published: 2026-07-31
-created: "2026-07-31T15:00:00+08:00"
-description: "English summary. Single line, no newlines."
-summary: "中文总结，不超过250字，单行。"
+  - "[[Author (@handle)]]"
+published: 2026-09-04
+created: "2026-09-09T22:50:00+08:00"
+description: "English description. Single line."
 tags:
   - ai
   - clipper
-  - topic-tag
-related:
-  - "[[Related Note]]"
-  # use related: [] for articles with no connections
+  - en-source
+translation_note: "[[中文标题]]"
+related: []
+image: "https://pub-<r2-subdomain>.r2.dev/interpreter-image/x_<id>-cover.jpg"
+---
+```
+
+#### 中文译文（根目录 `<Chinese Title>.md`）:
+```yaml
+---
 type: clipper
+title: "中文标题"
+original_title: "Original EN Title"
+source: "https://x.com/..."
+source_note: "[[sources/Original EN Title]]"
+author:
+  - "[[Author (@handle)]]"
+published: 2026-09-04
+created: "2026-09-09T22:50:00+08:00"
+description: "English description. Single line."
+summary: "中文导读，不超过120字（stripped chars），无破折号，无模板标签。"
+tags:
+  - ai
+  - clipper
+related: []
+image: "https://pub-<r2-subdomain>.r2.dev/interpreter-image/x_<id>-cover.jpg"
 ---
 ```
 
 Rules:
 - Strings double-quoted; dates unquoted; datetimes quoted
-- `summary` always Chinese-only, **≤120 stripped chars** (count with `len(re.sub(r'\\s','',s))` — punctuation and Latin tokens count toward the limit). **The bilingual gate does NOT enforce this cap — gate PASS at 157 stripped chars is real** (learned 2026-08-10, knoxtwts note: gate's only summary check lives in native mode, `>= 250` raw; bilingual mode never inspects summary length). The ≤120 limit is user convention — verify with `scripts/verify_summary_chars.py` (or the one-line `len(re.sub(r'\\s','',s))` check) BEFORE gating, and compress to ≤120 in ONE pass; do not treat gate PASS as summary approval. **User-mandated 2026-08-08: summary is 导读 (a teaser that decides whether to open the note), NOT a 总结 — it must NOT try to convey 80% of the content; it only needs to sell the note. User re-emphasized the distinction the same day ("我再次强调是导读，不是总结"). Hard cap ≤120 chars stripped (user tightened 150→120: "导读设置为120字以内"). 导读 anatomy (verified 2026-08-08 on 4 notes, 61-92 chars natural range): 钩子/最独特的点 (数据库里没有一家公司 / 视频模型零记忆) + 一句方法或价值 (Ontology+FDE 把隐性知识显式化 / 角色卡+密封 prompt 保一致) + 可选目标读者或评价性收尾 (想做 FDE 或 AI 进企业，这篇值得读). Evaluation-style closers (值得读/值得关注) are LEGAL in 导读 — they are the point of a teaser, unlike in 总结. Cut background/process-description first (40 亿、三层结构、创始人背景); keep the single most distinctive claim; noun-evidence only if space allows.**
-- **Summary structure — RIA 干货式 + 去 AI 味 smooth 表达 (user-mandated 2026-08-02; refined 2026-08-04: "<200字, 去掉'读完最值得记住的一句'开头, 增加结构化格式, 不要一坨"; refined same day: "格式化的范式不用增加这些词汇(核心/拆解/行动等标签), 在内容上区分并合适的换行即可")**: structure stays RIA (a structured knowledge card, NOT a narrative/dense paragraph), but the WORDS must read like a person wrote them — no AI-isms. **Format**: NO paradigm label words (no `**核心**`/`**拆解**`/`**行动**`/`R`/`I`/`A` tags — user explicitly rejected label words 2026-08-04); instead distinguish parts BY CONTENT and separate them with appropriate line breaks (2-4 short paragraphs inside the YAML summary field using `\n\n`, OR a single line at ≤120 chars — single-line accepted 2026-08-08, Palantir FDE 112-char and Grok 104-char both passed as one line; paragraph breaks are optional when the whole summary fits 120). First paragraph = the core conclusion (one sentence, most valuable point up front, not chronological retelling); middle paragraphs = 2-3 concrete points (concepts, tool cards, root causes, concrete scenarios); last paragraph = concrete "接下来怎么做" action. **视觉打点**: keep bold ONLY for key terms worth emphasizing (optional), never for paradigm labels. **去 AI 味 rules**: no fixed opening phrase like 「读完最值得记住的一句」(user explicitly rejected 2026-08-04); no AI-isms (值得注意的是/总而言之/赋能/抓手/沉淀/闭环/在这个快速发展的时代); read the summary aloud in Chinese — if it sounds like a template, rewrite it. Gate compatibility: no `——`, no protected terms (智能体/提示词/资源) inside the summary; line breaks inside the YAML field are fine (gate counts whitespace-stripped chars) — the **≤120** limit applies to stripped chars (2026-08-08 mandate supersedes the earlier <200). Apply to BOTH bilingual and native notes. **Script match**: 繁体中文 source notes get traditional-Chinese summaries — match the note's script, never default to simplified (learned 2026-08-04, 給 Agent 開發者的 Harness + Loop Engineering 系列). **Canonical worked example (accepted 2026-08-04, "Don't be a meat proxy" article): 4 short paragraphs, no labels — `别把 AI 输出原样转发，对方自己能聊，还更快、更能控上下文。` / `AI 回复啰嗦、常带貌似合理的胡话、术语密集；读懂、验证、用自己的话重写，才是你加的价值。` / `代码评审最典型：复制粘贴 ticket 和 reviewer 反馈，实现者其实是 reviewer + Claude Code，你只是肉代理。` / `该用 AI 就用，但回复前先过自己的脑子和手。` — 157 stripped chars.**
+- `summary` always Chinese-only, **≤120 stripped chars** (count with `len(re.sub(r'\s','',s))`).
+- `summary` is 导读 (teaser), NOT 总结 — 钩子 + 方法/价值 + 留有余地的收尾。去 AI 味，无 `——`，无智能体/提示词/资源。
 - `description` single line only — collapse whitespace
-- Empty values → omit property entirely
 - `type: clipper` always present (no quotes)
 - `published` always date-only (not datetime)
-- `image` — optional cover-art field, local `assets/...` path only (e.g. `assets/x-<post_id>-cover.jpg`). Vault convention: X Articles with a cover carry this field (15+ notes); web articles usually omit it.
-- **Batch-rewriting summaries across existing vault files**: when the summary standard changes (or retroactively updating old notes), use the programmatic yaml.safe_dump pattern in `references/batch-summary-rewrite.md` — it documents the mandatory quoting-fix chain (`type: 'clipper'` → `type: clipper`, etc.) that PyYAML introduces on every re-dump, plus a validation script and the iteration strategy for trimming dense articles to ≤120 stripped chars. **Verified production batches (2026-08-08, ≤120 导读 standard): 4 dense notes compressed in one pass — Palantir FDE 232→92, Grok Imagine 505→76, Base Power 413→61, Palette 371→66 — all gate PASS, all accepted by user as 导读 (NOT 总结). The intermediate 112/104/118/112-char versions were REJECTED as 总结-style — see `references/summary-ria-deai.md` for accepted vs rejected examples. Even a 505-char tutorial fits 120 by applying the four-step cut.**
 
-### 6. Images
+### 5a. Filename Sanitization & Folder Protection (CRITICAL)
 
-Download ALL images to `~/Documents/obsidian/Interpreter/assets/` with deterministic names — **actual production convention (2026-08): underscore after `x`, long numeric media_id, not index**:
-- `x_<tweet_id>-cover.<ext>` for cover (e.g. `x_2087519404976156987-cover.jpg`)
-- `x_<tweet_id>-<media_id>.<ext>` for inline, media_id = `media_entities[].media_id` (e.g. `x_2087519404976156987-2087509863211384832.jpg`)
+Obsidian treats `/` as a folder hierarchy delimiter. When a note title contains `/` or `\`:
+- **NEVER use raw `/` or `\` in the filename** — this splits the title into unwanted subdirectories (e.g. `从 ./hello...` turning into a folder `从 .` and file `hello...`).
+- **NEVER delete `/` or `\`** — this destroys technical meaning (e.g. `./hello` turning into meaningless `.hello`).
+- **MANDATORY RULE**: In filenames, always map `/` to fullwidth `／` (`U+FF0F`) and `\` to fullwidth `＼` (`U+FF3C`).
+  - Example: `从 ./hello 看程序如何真正执行` ➔ Filename is `从 .／hello 看程序如何真正执行.md`
+  - In YAML Frontmatter: keep `title: "从 ./hello 看程序如何真正执行"`, and provide `aliases: ["从 ./hello 看程序如何真正执行", "从 .／hello 看程序如何真正执行"]`.
+  - Result: 100% semantic fidelity, zero unintended subfolders, and seamless double-link compatibility in Obsidian.
 
-(Older skill text said `x-<post_id>-<index>.<ext>` with hyphens/index — stale; the vault has used the underscore+media_id form across 20+ notes. When adding images to an existing note, follow the file's existing naming, don't mix schemes.)
+### 6. Cloudflare R2 Images
 
-Rewrite all markdown image refs to local `assets/...` paths. No `pbs.twimg.com` or remote URLs should remain.
+All media assets (cover and inline) are downloaded and automatically uploaded to Cloudflare R2 bucket `obsidian` using `scripts/r2_upload.py`:
+- Public domain: `https://pub-<r2-subdomain>.r2.dev/interpreter-image/<filename>`
+- Naming convention:
+  - Cover: `x_<tweet_id>-cover.<ext>`
+  - Inline: `x_<tweet_id>-<media_id>.<ext>`
+- Both the `sources/` English note and root Chinese note reference the identical R2 CDN URL. Remote twitter CDN URLs (`pbs.twimg.com`) must never remain.
 
-For X images: **must use proxy** (`curl -x http://127.0.0.1:7890`). Direct downloads from `pbs.twimg.com` time out.
-
-If `curl` exits 35 (TLS EOF under proxy) for an image: retry with Python `requests` + explicit proxies + `verify=False` (same fallback as the fxtwitter JSON fetch).
-
-**Video media entities — top-level `original_img_url` is null, but the preview thumbnail IS downloadable** (corrected 2026-08-02, ashpreetbedi RAI article — old guidance said "skip videos" and was wrong): `media_entities[]` entries whose `media_info.__typename` is `ApiVideo` have NO top-level `original_img_url`, BUT `media_info.preview_image.original_img_url` carries a real thumbnail (`https://pbs.twimg.com/amplify_video_thumb/<media_id>/img/....jpg`). The body renders `[IMAGE:<media_id>]` placeholders for videos too, so a video-heavy article has MORE image markers than image-type entities. Correct handling: for every video entity referenced in the body, download `preview_image.original_img_url` as `x-<tweet_id>-<media_id>.jpg`, localize the placeholder, and COUNT it toward `--expect-images` (body image refs = image entities + video thumbs). Do NOT skip them — screen-recorded demo clips carry the article's visual content, and dropping them fails the count if the source dump emitted the marker. To find the thumb URL when it's missing: recurse `media_info.preview_image` for any `original_img_url` key (it lives one level deeper than image entities).
-
-**ApiGif media entities carry a downloadable mp4 variant, not a thumbnail** (learned 2026-08-15, alexeixbt "Neuroplasticity"): `__typename == "ApiGif"` → `media_info.preview_image` is empty/None and the usable URL lives in `media_info.variants[]` (`[{bit_rate: 0, content_type: "video/mp4", url: "https://video.twimg.com/tweet_video/<short>.mp4"}]`). Download the mp4 via proxy (`curl -x http://127.0.0.1:7890`) into assets as `x-<tweet_id>-<media_id>.mp4` and embed it as a normal image line (`![image](assets/x_...mp4)`); Obsidian renders local mp4 inline. It COUNTS toward `--expect-images` like any other body media. The entity still renders as an `[IMAGE:<media_id>]` body placeholder, so localization + counting works identically to the ApiVideo case — the only difference is the URL source (variants vs preview_image) and file extension.
-
-**`--expect-images` counts BODY image refs only — the frontmatter `image:` cover does NOT count in bilingual mode** (learned 2026-08-02, ashpreetbedi: passed `--expect-images 7` for 6 body media + cover → gate FAIL `image count 6 != expected 7`; 6 → PASS). This is the mirror image of the native-mode pitfall below, where `save-x-article.py` DOES emit `![Cover image]` in the body and cover counts. In bilingual hand-written notes the cover lives only in frontmatter `image:`, so `--expect-images` = number of `![...]` lines in the body (image entities + video thumbs) — never add +1 for cover. When in doubt, count actual `![` occurrences in the file body.
-
-**Body URLs use SHORT media filenames — `media_id` ≠ URL filename segment** (learned 2026-08-02, formulasearch 16-image native article): `media_entities[].media_id` is the long numeric ID (`2083770699102187520`), but the URLs embedded in article body blocks are `https://pbs.twimg.com/media/HOsKaRlacAAbo7Q.jpg` — the filename segment (`HOsKaRlacAAbo7Q`) is a short ID unrelated to `media_id`. If you download images using `media_id`-based names (`x-<tweet_id>-<media_id>.jpg`) and then try to localize body URLs by matching on `media_id`, EVERY replacement misses (`!! 未映射: <url>` for all of them). Correct localization mapping: iterate `media_entities`, split each `media_info.original_img_url` on `/` to get `(short_filename, ext)`, build a `short_filename → (media_id, ext)` reverse map, then for each body URL extract its filename, look up the media_id, and replace with `assets/x-<tweet_id>-<media_id>.<ext>`. Cover is a separate single entry (`cover_media.media_info.original_img_url`) — match it by full-URL equality before the filename lookup. Verify with `grep -c 'pbs.twimg.com' note.md` (must be 0) after the pass.
-
-If all download methods fail (corporate CDN block): keep remote URLs, note failure with ⚠️.
+Upload utility usage:
+```bash
+python3 scripts/r2_upload.py /path/to/local/image.jpg
+# Output: Uploaded: ... -> https://pub-<r2-subdomain>.r2.dev/interpreter-image/x_...jpg
+```
 
 ### 7. Relationship Layer
 
-**Always required** — add these sections after the body in every saved note:
-
+**English Note (`sources/`):**
 ```markdown
 ---
 
-## Internal Links<br>内部链接
+## Internal Links
 
-## Link Candidates<br>链接候选
+- [[中文标题]]
 
-- [Author on X](https://x.com/author)<br>[作者的 X 主页](https://x.com/author)
+## Link Candidates
+
+- [Author on X](https://x.com/author)
+- [Original Article (Source)](https://original.url)
 ```
 
-For concept-rich articles, populate with actual links. For simple articles, leave headings with Link Candidates containing at least the source URL. The unified `gate.py` checks for these sections — missing = FAIL.
+**Chinese Note (`/`):**
+```markdown
+---
 
-**Native (Chinese-original) notes**: relationship sections must be **monolingual Chinese, no `<br>`** (`## Internal Links` / `## Link Candidates` with plain `- [[...]]` / `- [text](url)` lines). A bilingual `<br>` relationship layer flips gate.py's native-mode detection (`"<br>" not in text`) into bilingual mode and fails every structural check.
+## 内部链接
 
-### 8. Proofread
+- [[sources/Original EN Title|英文原文]]
 
-Load the `proofreader` skill (`editorial/proofreader`) and execute its methodology against these project-specific standards:
+## 链接候选
 
-**Part A — Structural (格式合规)**
+- [作者的 X 主页](https://x.com/author)
+- [推文原文链接](https://original.url)
+```
+### 8. Proofread & De-AI
 
-□ A1. YAML complete: title, source, author, published/created, description, summary, tags, type: clipper. summary is Chinese-only, **≤120 stripped chars**, single line or `\n\n`-separated paragraphs.
-□ A2. Heading format: h1 uses `<br>` for bilingual. h1 matches frontmatter title.
-□ A3. Paragraph format: EN and CN on SAME line separated by `<br>`. No split-line pairs.
-□ A4. Sub-headings: `### EN<br>CN` on one line.
-□ A5. Ordered lists: `1. EN<br>CN` on one line, Chinese side drops the number.
-□ A6. Unordered lists: `- EN<br>CN` on one line. Not `- EN` then `- CN` on separate lines.
-□ A7. X engagement stripped: no likes, reposts, bookmarks, view counts.
-□ A8. UI text stripped: no "Want to publish your own Article?", "Upgrade to Premium", "Follow me", "Sign up", "Log in".
-□ A9. CTAs stripped: no author bios, follower stats, "hope this was useful", product promos.
-□ A10. Images preserved: all original images embedded at correct positions.
-□ A11. Relationship layer: frontmatter `related`, Chinese-side Wikilinks, Internal Links, Link Candidates present for concept-rich articles. No Wikilinks/Markdown styling on English source side.
+Execute quality checklist for both notes:
 
-**Part B — Content Quality (翻译质量)**
+**English Note (`sources/`):**
+- Full raw English source preserved without arbitrary omission
+- All media placeholders mapped to Cloudflare R2 links
+- Valid frontmatter with `translation_note: "[[<Chinese Title>]]"` and `type: clipper`
+- No `<br>` in body
 
-**De-AI pass (2026-08-18):** run the CN side through the `deai-ify` skill (load with skill_view before translating/rewriting). Its five rules + 补充规则 (禁对举、禁升华结尾、禁三连排比、标点克制、叙事先人后事、术语保留英文) ARE the operational checklist for the style mandate below — check B1–B10 first for term fidelity, then run the deai-ify 自查 7 步 on the finished CN side (朗读 → 扫大词 → 扫句式 → 扫段落 → 看结尾 → 看标点 → 再读). If the Chinese side reads like an AI wrote it, rewrite.
-
-**Translation style mandate (user-mandated 2026-08-13 — applies to ALL 中文翻译 sides, every note):** translate like an experienced, opinionated person naturally explaining things — concrete, continuous, detailed, rhythmic. NO template feel, NO big words, NO elevation. If the Chinese side reads like an AI wrote it, rewrite.
-
-□ B1. AI agent terms stay English: agent, subagent, MCP, tool, resource, prompt, host, client, server. Not translated to 智能体/代理/工具/资源/提示.
-□ B2. Exact original forms: match source spelling, hyphenation, capitalization, pluralization. sub-agents ≠ subagent ≠ subagents.
-□ B3. Untranslatable terms kept: brand names, product names, proper nouns, framework names. No forced translations.
-□ B4. "代理公司/代理服务" = business agency → keep in Chinese. All other 代理 in AI context → `agent`.
-□ B5. Contextual fluency: reads like natural written Chinese, not word-for-word. Sentence structure adjusted for Chinese reading flow.
-□ B6. No AI-isms: no 值得注意的是, 总而言之, 让我们, 众所周知, 在这个快速发展的时代; no 赋能/打造/助力/开启/深度/全方位/系统性/重塑/沉淀/闭环/抓手/提升.
-□ B6a. No forced 对举 (不是……而是……) constructions to manufacture contrast/conclusion effect.
-□ B6b. No grand-narrative endings (时代/文明/结构/人类命运) unless the source itself goes there.
-□ B6c. Paragraphs: natural prose — several full sentences per paragraph, continuous narrative/logic. Short sentences only for rhythm, pause, humor, turn, or emphasis. NEVER one-sentence-per-paragraph fragmentation for literary effect (the #1 failure mode in recent translations).
-□ B6d. Punctuation: minimize —— / quotes / ; / : in Chinese. Full-width punctuation only — no half-width punctuation inside Chinese text.
-□ B6e. Endings: no mechanical elevation, no rhetorical-question strings, no triple parallelism, no 「这就是我们这个时代……」 closers. End light — on a person, a detail, an action, or one lingering judgment.
-□ B6f. Narrative first: people and scenes before definitions or abstract judgment; concrete detail before concept. No open-with-definition/classification/theory.
-□ B6g. Oral-source material: keep the speaker's voice and meaning, drop filler words, adjust breaks and rhythm — do not force oral speech into standard-essay prose.
-□ B7. No em-dash drift: `——` only when EN source has `—`, `–`, or ` - ` as a pause.
-□ B8. `$` escaped: bare `$` → `\$` outside code blocks (web mode / `--audit` only — X-bilingual gate skips it; see §4).
-□ B9. Source-Chinese articles: saved as monolingual MD, not bilingual. No `<br>` anywhere.
-□ B10. "AI 公司" distinction: 大模型公司 for foundation-model companies (OpenAI/Anthropic), AI 应用型公司 for application-layer companies. No vague 笼统 "AI 公司".
+**Chinese Note (`/`):**
+- Reads like natural written Chinese, not translated sentence by sentence
+- De-AI passed: no 赋能/打造/助力/闭环/抓手/沉淀, no 对举 (不是……而是……), no 机械升华收尾
+- Punctuation: no `——`, full-width Chinese punctuation
+- AI terminology kept English: `agent`, `skill`, `prompt`, `tool`, `resource`, `MCP`, `Codex`
+- Summary: Chinese-only, ≤120 stripped chars, RIA teaser (导读) without paradigm label words
+- Valid frontmatter with `source_note: "[[sources/<EN Title>]]"`, `original_title: "<EN Title>"`, and `type: clipper`
+- No `<br>` in body
 
 ### 9. Validate
 
-After proofreading passes, run the unified gate (mode auto-detected):
+Run the unified `gate.py` on both files:
 
 ```bash
-GATE=~/.hermes/skills/content/interpreter-content-pipeline/scripts/gate.py
+GATE=~/.gemini/config/skills/clip-note/scripts/gate.py
 
-# Bilingual X Article (source coverage vs fxtwitter JSON)
-python $GATE --file path/to/note.md --json /tmp/x_<id>.json --expect-images <n>
+# 1. Validate English source note
+python $GATE --file ~/Documents/obsidian/Interpreter/sources/<EN_Title>.md \
+             --json /tmp/x_<id>.json \
+             --expect-images <n>
 
-# Bilingual web article (source coverage vs cleaned text dump)
-python $GATE --file path/to/note.md --source-text /tmp/source.md --expect-images <n>
-
-# Chinese-original X Article (no <br> body, local-only images)
-python $GATE --file path/to/note.md --json /tmp/x_<id>.json \
-  --source-url https://x.com/<user>/status/<id> --expect-images <n>
-
-# Structural-only quick check (any note)
-python $GATE --file path/to/note.md
+# 2. Validate Chinese translation note
+python $GATE --file ~/Documents/obsidian/Interpreter/<ZH_Title>.md \
+             --expect-images <n>
 ```
-
-**Known false positives (accept, don't fix):**
-- `possible UI/CTA residue: Like` — the word "Like" in narrative text
-- `possible Chinese em-dash drift` — when EN side has ` - ` (space-hyphen-space) pause
-- `possible protected AI-term translation drift` — "tools"/"resources" in non-MCP context
-- `possible AI-term translation drift: 提示` — when 提示 means "remind" (verb), not "prompt" (noun)
-- `possible protected AI term translated into Chinese` on **native** notes — the Chinese author's own words (智能体 etc.), not translation drift; accept when the term is in the source JSON blocks
-
-If ONLY these remain → PASS.
 
 ### 10. Save and Confirm
 
-Save as a **flat file** (no per-note subdirectory) at `~/Documents/obsidian/Interpreter/<Title>.md`.
-
-**Filename rule — `title.md`:** the filename is the English side of the frontmatter `title` (`<br>`-separated or ` - `-separated), slugged:
-
-- Strip the Chinese side entirely: `How LLMs Actually Work - LLM 工作原理详解` → `How LLMs Actually Work.md`
-- Replace `: \ / * ? " < > |` with spaces, collapse whitespace, trim trailing `.`/space
-- **English titles ending in a period produce a double-dot filename** (`...Run Them All at Once.` → `...Once..md`) — the trim-trailing-dot rule is easy to miss mid-pipeline. When the English side of the title ends in `.` (common with imperative titles like "Run them all at once."), explicitly strip it before appending `.md`, and remember the vault copy is what matters — the `/tmp` draft filename doesn't need renaming.
-- Pure-Chinese titles (Chinese-source articles) keep the Chinese title as-is
-- Cap at 120 chars, cut at a word boundary
-
-After renaming: batch-update `[[wikilink]]` references vault-wide, and never reuse a name that already exists (merge duplicates first).
-
-For retrofitting the whole vault (mass rename, duplicate merge, wikilink chaining, verification) see `references/vault-maintenance.md` — the exact procedure used on the 390-file vault in 2026-07. Reuse it whenever the filename rule changes or legacy names are discovered.
-
-**Response discipline**: Reply with `Filename.md ✅` only. Do NOT paste validation logs, image counts, gate output, or process summaries unless the user asks or there was a blocker.
+- English note saved at: `~/Documents/obsidian/Interpreter/sources/<Original EN Title>.md`
+- Chinese note saved at: `~/Documents/obsidian/Interpreter/<Chinese Title>.md`
+- Native Chinese note saved at: `~/Documents/obsidian/Interpreter/<Chinese Title>.md`
+- Response discipline: Reply with `[<ZH_Title>.md](...) ✅` only. Do NOT paste validation logs unless requested.
 
 ## Operational Patterns
 

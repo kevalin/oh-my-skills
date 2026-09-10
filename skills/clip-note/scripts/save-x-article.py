@@ -25,7 +25,9 @@ def esc_yaml(s: str) -> str:
 
 def sanitize_filename(s: str) -> str:
     s = s.strip().replace(":", " -").replace("：", " - ")
-    s = re.sub(r'[\\/*?"<>|]', "", s)
+    # Replace / and \ with fullwidth to prevent Obsidian from treating them as folder separators
+    s = s.replace("/", "／").replace("\\", "＼")
+    s = re.sub(r'[*?"<>|]', "", s)
     s = re.sub(r"\s+", " ", s).strip()
     return s[:180].rstrip(" .")
 
